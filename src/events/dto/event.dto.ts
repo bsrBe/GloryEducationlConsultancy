@@ -143,3 +143,10 @@ export class CheckInDto {
   @IsBoolean()
   attended?: boolean;
 }
+
+export class JoinEventDto {
+  @IsOptional()
+  @IsNumber()
+  sessionIndex?: number;
+}
+

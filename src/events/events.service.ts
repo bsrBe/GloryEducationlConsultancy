@@ -3,22 +3,27 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import * as crypto from 'crypto';
 import { Event, EventDocument } from './schemas/event.schema';
+import { Student, StudentDoc } from '../students/schemas/student.schema';
 import {
   CreateEventDto,
   UpdateEventDto,
   CreateSessionDto,
   AssignStudentsDto,
   CheckInDto,
+  JoinEventDto,
 } from './dto/event.dto';
 
 @Injectable()
 export class EventsService {
   constructor(
     @InjectModel(Event.name) private eventModel: Model<EventDocument>,
+    @InjectModel(Student.name) private studentModel: Model<StudentDoc>,
   ) {}
 
   // --- Event CRUD ---
@@ -288,4 +293,168 @@ export class EventsService {
       attended: checkIn?.attended || false,
     };
   }
+
+  // --- Jitsi Video Room Access Gate (Paywall + Time Gate + Obfuscation) ---
+  async joinRoom(eventId: string, user: any, dto: JoinEventDto) {
+    const event = await this.eventModel.findById(eventId);
+    if (!event) throw new NotFoundException('Event not found');
+
+    const isStaff =
+      user.role === 'admin' ||
+      user.role === 'glory_staff' ||
+      user.role === 'representative';
+
+    let studentProfile: StudentDoc | null = null;
+
+    // 1. Payment Verification Gate for Students
+    if (!isStaff) {
+      studentProfile = await this.studentModel.findById(user._id);
+      if (!studentProfile) {
+        throw new UnauthorizedException('Student profile not found');
+      }
+
+      const hasVerifiedPayment = studentProfile.payments?.some(
+        (p) => p.status === 'Verified',
+      );
+
+      if (!hasVerifiedPayment) {
+        throw new ForbiddenException(
+          'Access to the live admissions conference requires a verified 500 ETB registration pass. Please complete or verify your payment in the payments section.',
+        );
+      }
+    }
+
+    // 2. Validate Session (if requesting a breakout track)
+    let sessionName = 'Main Plenary Room';
+    let targetSession: any = null;
+
+    if (dto.sessionIndex !== undefined) {
+      if (!event.sessions || !event.sessions[dto.sessionIndex]) {
+        throw new BadRequestException('Requested breakout session does not exist.');
+      }
+      targetSession = event.sessions[dto.sessionIndex];
+      sessionName =
+        targetSession.name || `Breakout Track ${dto.sessionIndex + 1}`;
+    }
+
+    // 3. Time Gate (Students can only join 15 mins before start time unless event is marked 'live')
+    if (!isStaff && event.status !== 'live') {
+      const timeCheck = this.isEventOpen(
+        event.date,
+        event.startTime,
+        event.endTime,
+      );
+      if (!timeCheck.allowed) {
+        throw new BadRequestException(timeCheck.message);
+      }
+    }
+
+    // 4. Generate Cryptographic High-Entropy Room Name
+    const secret = process.env.JWT_SECRET || 'glory-edu-admissions-secret-2026';
+    const rawKey = `${event._id}_${dto.sessionIndex !== undefined ? `track_${dto.sessionIndex}` : 'main'}_${event.name}`;
+    const hash = crypto
+      .createHmac('sha256', secret)
+      .update(rawKey)
+      .digest('hex')
+      .substring(0, 18);
+
+    const safeEventSlug = event.name
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 12);
+    const roomName = `GloryFair_${safeEventSlug}_${dto.sessionIndex !== undefined ? `Track${dto.sessionIndex + 1}_` : 'Plenary_'}${hash}`;
+
+    // 5. Automatic Attendance Check-in for students
+    if (studentProfile) {
+      await this.checkIn(eventId, studentProfile._id.toString(), {
+        sessionId: targetSession
+          ? (targetSession as any)._id?.toString()
+          : undefined,
+        attended: true,
+      }).catch(() => {});
+    }
+
+    const studentIdBadge = studentProfile?.studentId
+      ? ` (${studentProfile.studentId})`
+      : ` (${user.role || 'Guest'})`;
+
+    return {
+      domain: process.env.JITSI_DOMAIN || 'meet.jit.si',
+      roomName,
+      displayName: `${user.firstName} ${user.lastName}${studentIdBadge}`,
+      email: user.email,
+      isModerator: isStaff,
+      eventName: event.name,
+      sessionName,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      date: event.date,
+      status: event.status,
+    };
+  }
+
+  private isEventOpen(
+    eventDate: Date,
+    startTimeStr?: string,
+    endTimeStr?: string,
+  ): { allowed: boolean; message?: string } {
+    if (!eventDate) return { allowed: true };
+    const now = new Date();
+
+    const start = new Date(eventDate);
+    if (startTimeStr) {
+      const parsed = this.parseTime(startTimeStr);
+      if (parsed) {
+        start.setHours(parsed.hours, parsed.minutes, 0, 0);
+      }
+    }
+
+    // 15-minute buffer before scheduled start
+    const openTime = new Date(start.getTime() - 15 * 60 * 1000);
+
+    if (now < openTime) {
+      const formattedDate = start.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      return {
+        allowed: false,
+        message: `This conference room will open 15 minutes before the start time (${startTimeStr || 'scheduled start'} on ${formattedDate}). Please check back then.`,
+      };
+    }
+
+    if (endTimeStr) {
+      const end = new Date(eventDate);
+      const parsedEnd = this.parseTime(endTimeStr);
+      if (parsedEnd) {
+        end.setHours(parsedEnd.hours, parsedEnd.minutes, 0, 0);
+        // Allow up to 2 hours buffer after scheduled end
+        const closeTime = new Date(end.getTime() + 120 * 60 * 1000);
+        if (now > closeTime) {
+          return {
+            allowed: false,
+            message: 'This conference session has concluded.',
+          };
+        }
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  private parseTime(timeStr: string): { hours: number; minutes: number } | null {
+    try {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (!match) return null;
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const modifier = match[3]?.toUpperCase();
+      if (modifier === 'PM' && hours < 12) hours += 12;
+      if (modifier === 'AM' && hours === 12) hours = 0;
+      return { hours, minutes };
+    } catch {
+      return null;
+    }
+  }
 }
+

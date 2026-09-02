@@ -17,6 +17,7 @@ import {
   CreateSessionDto,
   AssignStudentsDto,
   CheckInDto,
+  JoinEventDto,
 } from './dto/event.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -143,4 +144,17 @@ export class EventsController {
   getAttendanceReport(@Param('id') id: string) {
     return this.eventsService.getAttendanceReport(id);
   }
+
+  // --- Video Conference Join (Paywall & Verification Gate) ---
+
+  @Post(':id/join')
+  @UseGuards(AuthGuard('jwt'))
+  joinRoom(
+    @Param('id') id: string,
+    @Body() dto: JoinEventDto,
+    @Request() req: any,
+  ) {
+    return this.eventsService.joinRoom(id, req.user, dto);
+  }
 }
+
