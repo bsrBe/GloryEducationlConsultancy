@@ -10,8 +10,13 @@ export class SendMessageDto {
   @IsString()
   subject: string;
 
+  @IsOptional()
   @IsString()
-  body: string;
+  body?: string;
+
+  @IsOptional()
+  @IsString()
+  content?: string;
 
   @IsOptional()
   @IsEnum(['template', 'manual'])

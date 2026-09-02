@@ -15,11 +15,13 @@ export class CountersService {
    * If the counter doesn't exist, it's created with seq = 1.
    */
   async getNextSequence(name: string): Promise<number> {
-    const result = await this.counterModel.findOneAndUpdate(
-      { name },
-      { $inc: { seq: 1 } },
-      { new: true, upsert: true },
-    ).exec();
+    const result = await this.counterModel
+      .findOneAndUpdate(
+        { name },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true },
+      )
+      .exec();
 
     return result.seq;
   }

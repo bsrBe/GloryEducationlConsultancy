@@ -5,11 +5,14 @@ import { Audit } from './schemas/audit.schema';
 
 @Injectable()
 export class AuditService {
-  constructor(
-    @InjectModel(Audit.name) private auditModel: Model<Audit>,
-  ) {}
+  constructor(@InjectModel(Audit.name) private auditModel: Model<Audit>) {}
 
-  async log(userId: string, action: string, studentId?: string, details?: Record<string, any>) {
+  async log(
+    userId: string,
+    action: string,
+    studentId?: string,
+    details?: Record<string, any>,
+  ) {
     const audit = new this.auditModel({
       user: userId,
       action,
@@ -20,7 +23,12 @@ export class AuditService {
     return audit.save();
   }
 
-  async findAll(query?: { studentId?: string; userId?: string; page?: number; limit?: number }) {
+  async findAll(query?: {
+    studentId?: string;
+    userId?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const filter: any = {};
     if (query?.studentId) filter.studentId = query.studentId;
     if (query?.userId) filter.user = query.userId;

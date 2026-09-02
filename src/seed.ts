@@ -14,9 +14,13 @@ async function seed() {
 
   const userModel = app.get<Model<User>>(getModelToken(User.name));
   const studentModel = app.get<Model<StudentDoc>>(getModelToken(Student.name));
-  const universityModel = app.get<Model<University>>(getModelToken(University.name));
+  const universityModel = app.get<Model<University>>(
+    getModelToken(University.name),
+  );
   const eventModel = app.get<Model<EventDocument>>(getModelToken(Event.name));
-  const counterModel = app.get<Model<CounterDocument>>(getModelToken(Counter.name));
+  const counterModel = app.get<Model<CounterDocument>>(
+    getModelToken(Counter.name),
+  );
 
   console.log('🌱 Starting seed...\n');
 
@@ -36,7 +40,12 @@ async function seed() {
     console.log('✅ Admin created: admin@gloryedu.com / admin123456');
   } else {
     admin = adminExists;
-    console.log('ℹ️  Admin already exists:', admin.email);
+    const hashedPassword = await bcrypt.hash('admin123456', 12);
+    await userModel.updateOne(
+      { _id: admin._id },
+      { isActive: true, password: hashedPassword },
+    );
+    console.log('ℹ️  Admin already exists (updated to active):', admin.email);
   }
 
   // --- 2. Glory Staff ---
@@ -67,9 +76,27 @@ async function seed() {
         name: 'Massachusetts Institute of Technology',
         destination: 'USA',
         programs: [
-          { name: 'Computer Science', degreeLevel: 'Bachelor', gpaRequirement: 3.5, englishRequirement: 'IELTS 7.0', tuitionInfo: '$55,000/year' },
-          { name: 'Business', degreeLevel: 'Master', gpaRequirement: 3.2, englishRequirement: 'IELTS 6.5', tuitionInfo: '$75,000/year' },
-          { name: 'Engineering', degreeLevel: 'Bachelor', gpaRequirement: 3.4, englishRequirement: 'IELTS 7.0', tuitionInfo: '$52,000/year' },
+          {
+            name: 'Computer Science',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.5,
+            englishRequirement: 'IELTS 7.0',
+            tuitionInfo: '$55,000/year',
+          },
+          {
+            name: 'Business',
+            degreeLevel: 'Master',
+            gpaRequirement: 3.2,
+            englishRequirement: 'IELTS 6.5',
+            tuitionInfo: '$75,000/year',
+          },
+          {
+            name: 'Engineering',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.4,
+            englishRequirement: 'IELTS 7.0',
+            tuitionInfo: '$52,000/year',
+          },
         ],
         reviewCapacity: 100,
         liveSessionAvailable: true,
@@ -79,9 +106,27 @@ async function seed() {
         name: 'University of Toronto',
         destination: 'Canada',
         programs: [
-          { name: 'Computer Science', degreeLevel: 'Bachelor', gpaRequirement: 3.0, englishRequirement: 'IELTS 6.5', tuitionInfo: 'CAD 55,000/year' },
-          { name: 'Business', degreeLevel: 'Bachelor', gpaRequirement: 2.8, englishRequirement: 'IELTS 6.0', tuitionInfo: 'CAD 48,000/year' },
-          { name: 'Engineering', degreeLevel: 'Bachelor', gpaRequirement: 3.2, englishRequirement: 'IELTS 6.5', tuitionInfo: 'CAD 52,000/year' },
+          {
+            name: 'Computer Science',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.0,
+            englishRequirement: 'IELTS 6.5',
+            tuitionInfo: 'CAD 55,000/year',
+          },
+          {
+            name: 'Business',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 2.8,
+            englishRequirement: 'IELTS 6.0',
+            tuitionInfo: 'CAD 48,000/year',
+          },
+          {
+            name: 'Engineering',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.2,
+            englishRequirement: 'IELTS 6.5',
+            tuitionInfo: 'CAD 52,000/year',
+          },
         ],
         reviewCapacity: 80,
         liveSessionAvailable: true,
@@ -91,9 +136,27 @@ async function seed() {
         name: 'University of Oxford',
         destination: 'UK',
         programs: [
-          { name: 'Computer Science', degreeLevel: 'Bachelor', gpaRequirement: 3.7, englishRequirement: 'IELTS 7.5', tuitionInfo: '£35,000/year' },
-          { name: 'Business', degreeLevel: 'Master', gpaRequirement: 3.5, englishRequirement: 'IELTS 7.0', tuitionInfo: '£45,000/year' },
-          { name: 'Medicine', degreeLevel: 'Bachelor', gpaRequirement: 3.8, englishRequirement: 'IELTS 7.5', tuitionInfo: '£38,000/year' },
+          {
+            name: 'Computer Science',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.7,
+            englishRequirement: 'IELTS 7.5',
+            tuitionInfo: '£35,000/year',
+          },
+          {
+            name: 'Business',
+            degreeLevel: 'Master',
+            gpaRequirement: 3.5,
+            englishRequirement: 'IELTS 7.0',
+            tuitionInfo: '£45,000/year',
+          },
+          {
+            name: 'Medicine',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.8,
+            englishRequirement: 'IELTS 7.5',
+            tuitionInfo: '£38,000/year',
+          },
         ],
         reviewCapacity: 50,
         liveSessionAvailable: true,
@@ -103,8 +166,20 @@ async function seed() {
         name: 'Technical University of Munich',
         destination: 'Germany',
         programs: [
-          { name: 'Engineering', degreeLevel: 'Bachelor', gpaRequirement: 3.0, englishRequirement: 'IELTS 6.0', tuitionInfo: '€500/semester' },
-          { name: 'Computer Science', degreeLevel: 'Master', gpaRequirement: 3.2, englishRequirement: 'IELTS 6.5', tuitionInfo: '€500/semester' },
+          {
+            name: 'Engineering',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.0,
+            englishRequirement: 'IELTS 6.0',
+            tuitionInfo: '€500/semester',
+          },
+          {
+            name: 'Computer Science',
+            degreeLevel: 'Master',
+            gpaRequirement: 3.2,
+            englishRequirement: 'IELTS 6.5',
+            tuitionInfo: '€500/semester',
+          },
         ],
         reviewCapacity: 60,
         liveSessionAvailable: true,
@@ -114,8 +189,20 @@ async function seed() {
         name: 'University of Melbourne',
         destination: 'Australia',
         programs: [
-          { name: 'Business', degreeLevel: 'Bachelor', gpaRequirement: 3.0, englishRequirement: 'IELTS 6.5', tuitionInfo: 'AUD 45,000/year' },
-          { name: 'Computer Science', degreeLevel: 'Bachelor', gpaRequirement: 3.2, englishRequirement: 'IELTS 6.5', tuitionInfo: 'AUD 48,000/year' },
+          {
+            name: 'Business',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.0,
+            englishRequirement: 'IELTS 6.5',
+            tuitionInfo: 'AUD 45,000/year',
+          },
+          {
+            name: 'Computer Science',
+            degreeLevel: 'Bachelor',
+            gpaRequirement: 3.2,
+            englishRequirement: 'IELTS 6.5',
+            tuitionInfo: 'AUD 48,000/year',
+          },
         ],
         reviewCapacity: 40,
         liveSessionAvailable: true,
@@ -157,7 +244,7 @@ async function seed() {
 
   // --- 6. Test Students at various stages ---
   const studentCount = await studentModel.countDocuments();
-  let studentCounter = await counterModel.findOne({ name: 'studentId' });
+  const studentCounter = await counterModel.findOne({ name: 'studentId' });
   const startNum = (studentCounter?.seq || 0) + 1;
 
   if (studentCount === 0) {
@@ -178,8 +265,24 @@ async function seed() {
         englishTest: 'IELTS',
         englishScore: 7.0,
         profileComplete: 100,
-        payments: [{ method: 'telebirr', transactionRef: 'TXN001', amount: 500, status: 'Verified', date: new Date() }],
-        documents: [{ fileName: 'GH26-000001_AcademicProfile.pdf', cloudinaryUrl: 'https://example.com/doc1.pdf', fileSize: 1024000, reviewStatus: 'Uploaded', version: 1 }],
+        payments: [
+          {
+            method: 'telebirr',
+            transactionRef: 'TXN001',
+            amount: 500,
+            status: 'Verified',
+            date: new Date(),
+          },
+        ],
+        documents: [
+          {
+            fileName: 'GH26-000001_AcademicProfile.pdf',
+            cloudinaryUrl: 'https://example.com/doc1.pdf',
+            fileSize: 1024000,
+            reviewStatus: 'Uploaded',
+            version: 1,
+          },
+        ],
       },
       {
         // Student 2: Payment pending
@@ -197,7 +300,15 @@ async function seed() {
         englishTest: 'IELTS',
         englishScore: 6.5,
         profileComplete: 100,
-        payments: [{ method: 'bank_transfer', transactionRef: 'TXN002', amount: 500, status: 'Pending', date: new Date() }],
+        payments: [
+          {
+            method: 'bank_transfer',
+            transactionRef: 'TXN002',
+            amount: 500,
+            status: 'Pending',
+            date: new Date(),
+          },
+        ],
       },
       {
         // Student 3: Assessed + Matched + Reviewed (Green)
@@ -215,17 +326,48 @@ async function seed() {
         englishTest: 'TOEFL',
         englishScore: 95,
         profileComplete: 100,
-        payments: [{ method: 'cash', transactionRef: 'TXN003', amount: 500, status: 'Verified', date: new Date() }],
-        documents: [{ fileName: 'GH26-000003_AcademicProfile.pdf', cloudinaryUrl: 'https://example.com/doc3.pdf', fileSize: 2048000, reviewStatus: 'Reviewed', version: 1 }],
+        payments: [
+          {
+            method: 'cash',
+            transactionRef: 'TXN003',
+            amount: 500,
+            status: 'Verified',
+            date: new Date(),
+          },
+        ],
+        documents: [
+          {
+            fileName: 'GH26-000003_AcademicProfile.pdf',
+            cloudinaryUrl: 'https://example.com/doc3.pdf',
+            fileSize: 2048000,
+            reviewStatus: 'Reviewed',
+            version: 1,
+          },
+        ],
         assessment: {
-          categoryScores: { academic: 30, english: 18, programFit: 14, academicStatus: 9, documentation: 9, institutionRequirements: 14 },
+          categoryScores: {
+            academic: 30,
+            english: 18,
+            programFit: 14,
+            academicStatus: 9,
+            documentation: 9,
+            institutionRequirements: 14,
+          },
           totalScore: 94,
           assessedBy: staff._id,
           assessedAt: new Date(),
         },
         matches: {
-          primary: { university: universities[2]._id, program: 'Engineering', reason: 'UK preference + Engineering + GPA 3.8 + TOEFL 95' },
-          secondary: { university: universities[0]._id, program: 'Engineering', reason: 'Strong academic profile' },
+          primary: {
+            university: universities[2]._id,
+            program: 'Engineering',
+            reason: 'UK preference + Engineering + GPA 3.8 + TOEFL 95',
+          },
+          secondary: {
+            university: universities[0]._id,
+            program: 'Engineering',
+            reason: 'Strong academic profile',
+          },
           matchedBy: staff._id,
           matchedAt: new Date(),
           status: 'approved',
@@ -254,16 +396,39 @@ async function seed() {
         englishTest: 'IELTS',
         englishScore: 6.0,
         profileComplete: 100,
-        payments: [{ method: 'telebirr', transactionRef: 'TXN004', amount: 500, status: 'Verified', date: new Date() }],
+        payments: [
+          {
+            method: 'telebirr',
+            transactionRef: 'TXN004',
+            amount: 500,
+            status: 'Verified',
+            date: new Date(),
+          },
+        ],
         assessment: {
-          categoryScores: { academic: 24, english: 14, programFit: 12, academicStatus: 8, documentation: 7, institutionRequirements: 11 },
+          categoryScores: {
+            academic: 24,
+            english: 14,
+            programFit: 12,
+            academicStatus: 8,
+            documentation: 7,
+            institutionRequirements: 11,
+          },
           totalScore: 76,
           assessedBy: staff._id,
           assessedAt: new Date(),
         },
         matches: {
-          primary: { university: universities[1]._id, program: 'Business', reason: 'Canada preference + Business + GPA 3.0 + IELTS 6.0' },
-          secondary: { university: universities[4]._id, program: 'Business', reason: 'Alternative destination' },
+          primary: {
+            university: universities[1]._id,
+            program: 'Business',
+            reason: 'Canada preference + Business + GPA 3.0 + IELTS 6.0',
+          },
+          secondary: {
+            university: universities[4]._id,
+            program: 'Business',
+            reason: 'Alternative destination',
+          },
           matchedBy: staff._id,
           matchedAt: new Date(),
           status: 'approved',
@@ -292,8 +457,24 @@ async function seed() {
         englishTest: 'IELTS',
         englishScore: 6.5,
         profileComplete: 100,
-        payments: [{ method: 'bank_transfer', transactionRef: 'TXN005', amount: 500, status: 'Verified', date: new Date() }],
-        documents: [{ fileName: 'GH26-000005_AcademicProfile.pdf', cloudinaryUrl: 'https://example.com/doc5.pdf', fileSize: 1536000, reviewStatus: 'Uploaded', version: 1 }],
+        payments: [
+          {
+            method: 'bank_transfer',
+            transactionRef: 'TXN005',
+            amount: 500,
+            status: 'Verified',
+            date: new Date(),
+          },
+        ],
+        documents: [
+          {
+            fileName: 'GH26-000005_AcademicProfile.pdf',
+            cloudinaryUrl: 'https://example.com/doc5.pdf',
+            fileSize: 1536000,
+            reviewStatus: 'Uploaded',
+            version: 1,
+          },
+        ],
       },
     ];
 
@@ -306,7 +487,9 @@ async function seed() {
         studentId,
         password: hashedPassword,
       });
-      console.log(`✅ Student created: ${studentId} (${data.firstName} ${data.lastName})`);
+      console.log(
+        `✅ Student created: ${studentId} (${data.firstName} ${data.lastName})`,
+      );
     }
 
     // Update counter

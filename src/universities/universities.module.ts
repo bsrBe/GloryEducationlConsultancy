@@ -6,7 +6,9 @@ import { University, UniversitySchema } from './schemas/university.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: University.name, schema: UniversitySchema }]),
+    MongooseModule.forFeature([
+      { name: University.name, schema: UniversitySchema },
+    ]),
   ],
   controllers: [UniversitiesController],
   providers: [UniversitiesService],

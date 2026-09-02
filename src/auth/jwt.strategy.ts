@@ -21,9 +21,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; email: string; role: string; type: string }) {
+  async validate(payload: {
+    sub: string;
+    email: string;
+    role: string;
+    type: string;
+  }) {
     if (payload.type === 'student') {
-      const student = await this.studentModel.findById(payload.sub).select('-password');
+      const student = await this.studentModel
+        .findById(payload.sub)
+        .select('-password');
       if (!student) throw new UnauthorizedException();
       return { ...student.toObject(), role: 'student', type: 'student' };
     }

@@ -1,4 +1,10 @@
-import { IsObject, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsObject,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AssessmentOverrideDto {
@@ -13,8 +19,9 @@ export class CreateAssessmentDto {
   @IsObject()
   categoryScores: Record<string, number>;
 
+  @IsOptional()
   @IsNumber()
-  totalScore: number;
+  totalScore?: number;
 }
 
 export class OverrideAssessmentDto {

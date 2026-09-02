@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsDateString, IsArray, IsNumber, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsDateString,
+  IsArray,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateEventDto {
   @IsString()
@@ -24,9 +31,17 @@ export class CreateEventDto {
   mainRoomLink?: string;
 
   @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   moderators?: string[];
+
+  @IsOptional()
+  @IsString()
+  checkInCode?: string;
 }
 
 export class UpdateEventDto {
@@ -82,7 +97,15 @@ export class CreateSessionDto {
 
   @IsOptional()
   @IsString()
+  universityName?: string;
+
+  @IsOptional()
+  @IsString()
   representative?: string;
+
+  @IsOptional()
+  @IsString()
+  repName?: string;
 
   @IsOptional()
   @IsString()
@@ -93,6 +116,7 @@ export class CreateSessionDto {
   roomLink?: string;
 
   @IsOptional()
+  @IsNumber()
   capacity?: number;
 }
 
@@ -116,5 +140,6 @@ export class CheckInDto {
   codeUsed?: string;
 
   @IsOptional()
+  @IsBoolean()
   attended?: boolean;
 }

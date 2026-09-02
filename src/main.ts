@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { AuditService } from './audit/audit.service';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { RateLimiterGuard } from './common/guards/rate-limiter.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -35,11 +36,16 @@ async function bootstrap() {
   // Global audit interceptor
   app.useGlobalInterceptors(new AuditInterceptor(auditService));
 
+  // Global rate limiter guard (brute force protection)
+  app.useGlobalGuards(new RateLimiterGuard());
+
   // Graceful shutdown
   app.enableShutdownHooks();
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  console.log(`🚀 Glory Admissions API running on http://localhost:${port}/api`);
+  console.log(
+    `🚀 Glory Admissions API running on http://localhost:${port}/api`,
+  );
 }
 bootstrap();

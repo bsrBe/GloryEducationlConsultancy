@@ -38,8 +38,12 @@ export class EmailService {
       return false;
     }
 
-    const senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || 'noreply@gloryedu.com';
-    const senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'Glory Educational Consultancy';
+    const senderEmail =
+      this.configService.get<string>('BREVO_SENDER_EMAIL') ||
+      'noreply@gloryedu.com';
+    const senderName =
+      this.configService.get<string>('BREVO_SENDER_NAME') ||
+      'Glory Educational Consultancy';
 
     try {
       const request: EmailRequest = {
@@ -49,11 +53,13 @@ export class EmailService {
         htmlContent: template.html(data),
       };
 
-      await this.client.transactionalEmails.sendTransacEmail(request as any);
+      await this.client.transactionalEmails.sendTransacEmail(request);
       this.logger.log(`Email sent: ${templateName} to ${to.email}`);
       return true;
     } catch (error: any) {
-      this.logger.error(`Failed to send email to ${to.email}: ${error?.message || error}`);
+      this.logger.error(
+        `Failed to send email to ${to.email}: ${error?.message || error}`,
+      );
       return false;
     }
   }
@@ -68,8 +74,12 @@ export class EmailService {
       return false;
     }
 
-    const senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || 'noreply@gloryedu.com';
-    const senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'Glory Educational Consultancy';
+    const senderEmail =
+      this.configService.get<string>('BREVO_SENDER_EMAIL') ||
+      'noreply@gloryedu.com';
+    const senderName =
+      this.configService.get<string>('BREVO_SENDER_NAME') ||
+      'Glory Educational Consultancy';
 
     try {
       const request: EmailRequest = {
@@ -79,11 +89,15 @@ export class EmailService {
         htmlContent,
       };
 
-      await this.client.transactionalEmails.sendTransacEmail(request as any);
-      this.logger.log(`Custom email sent to ${to.map((t) => t.email).join(', ')}`);
+      await this.client.transactionalEmails.sendTransacEmail(request);
+      this.logger.log(
+        `Custom email sent to ${to.map((t) => t.email).join(', ')}`,
+      );
       return true;
     } catch (error: any) {
-      this.logger.error(`Failed to send custom email: ${error?.message || error}`);
+      this.logger.error(
+        `Failed to send custom email: ${error?.message || error}`,
+      );
       return false;
     }
   }

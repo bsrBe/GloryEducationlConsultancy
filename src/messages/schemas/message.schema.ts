@@ -38,3 +38,6 @@ export class Message extends Document {
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
+
+MessageSchema.index({ recipient: 1, recipientModel: 1, isRead: 1, sentAt: -1 });
+MessageSchema.index({ sender: 1, sentAt: -1 });

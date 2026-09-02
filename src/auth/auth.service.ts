@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -22,7 +28,9 @@ export class AuthService {
   ) {}
 
   async registerStudent(dto: RegisterStudentDto) {
-    const existing = await this.studentModel.findOne({ email: dto.email.toLowerCase() });
+    const existing = await this.studentModel.findOne({
+      email: dto.email.toLowerCase(),
+    });
     if (existing) {
       throw new ConflictException('Email already registered');
     }
@@ -47,30 +55,51 @@ export class AuthService {
     });
 
     // Send registration confirmation email
-    this.emailService.sendTemplateEmail('registration_confirmation', {
-      email: student.email,
-      name: `${student.firstName} ${student.lastName}`,
-    }, {
-      firstName: student.firstName,
-      lastName: student.lastName,
-      email: student.email,
-      studentId: student.studentId,
-    }).catch(() => {});
+    this.emailService
+      .sendTemplateEmail(
+        'registration_confirmation',
+        {
+          email: student.email,
+          name: `${student.firstName} ${student.lastName}`,
+        },
+        {
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          studentId: student.studentId,
+        },
+      )
+      .catch(() => {});
 
     return {
       access_token: token,
       student: {
+        id: student._id,
+        _id: student._id,
         studentId: student.studentId,
         email: student.email,
         firstName: student.firstName,
         lastName: student.lastName,
+        role: 'student',
+      },
+      user: {
+        id: student._id,
+        _id: student._id,
+        studentId: student.studentId,
+        email: student.email,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        role: 'student',
+        type: 'student',
       },
     };
   }
 
   async login(dto: LoginDto) {
     // Try student login first
-    const student = await this.studentModel.findOne({ email: dto.email.toLowerCase() });
+    const student = await this.studentModel.findOne({
+      email: dto.email.toLowerCase(),
+    });
     if (student) {
       const isMatch = await bcrypt.compare(dto.password, student.password);
       if (!isMatch) throw new UnauthorizedException('Invalid credentials');
@@ -86,6 +115,7 @@ export class AuthService {
         access_token: token,
         user: {
           id: student._id,
+          _id: student._id,
           studentId: student.studentId,
           email: student.email,
           firstName: student.firstName,
@@ -97,10 +127,13 @@ export class AuthService {
     }
 
     // Try staff login
-    const user = await this.userModel.findOne({ email: dto.email.toLowerCase() });
+    const user = await this.userModel.findOne({
+      email: dto.email.toLowerCase(),
+    });
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    if (!user.isActive) throw new UnauthorizedException('Account is deactivated');
+    if (!user.isActive)
+      throw new UnauthorizedException('Account is deactivated');
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
@@ -116,6 +149,7 @@ export class AuthService {
       access_token: token,
       user: {
         id: user._id,
+        _id: user._id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -125,13 +159,21 @@ export class AuthService {
     };
   }
 
-  async changePassword(userId: string, userType: string, dto: ChangePasswordDto) {
+  async changePassword(
+    userId: string,
+    userType: string,
+    dto: ChangePasswordDto,
+  ) {
     if (userType === 'student') {
       const student = await this.studentModel.findById(userId);
       if (!student) throw new NotFoundException('Student not found');
 
-      const isMatch = await bcrypt.compare(dto.currentPassword, student.password);
-      if (!isMatch) throw new BadRequestException('Current password is incorrect');
+      const isMatch = await bcrypt.compare(
+        dto.currentPassword,
+        student.password,
+      );
+      if (!isMatch)
+        throw new BadRequestException('Current password is incorrect');
 
       student.password = await bcrypt.hash(dto.newPassword, 12);
       await student.save();
@@ -142,7 +184,8 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     const isMatch = await bcrypt.compare(dto.currentPassword, user.password);
-    if (!isMatch) throw new BadRequestException('Current password is incorrect');
+    if (!isMatch)
+      throw new BadRequestException('Current password is incorrect');
 
     user.password = await bcrypt.hash(dto.newPassword, 12);
     await user.save();
@@ -150,12 +193,17 @@ export class AuthService {
   }
 
   async resetPassword(email: string) {
-    const student = await this.studentModel.findOne({ email: email.toLowerCase() });
+    const student = await this.studentModel.findOne({
+      email: email.toLowerCase(),
+    });
     const user = await this.userModel.findOne({ email: email.toLowerCase() });
 
     // Always return success to prevent email enumeration
     if (!student && !user) {
-      return { message: 'If an account exists with this email, a reset link has been sent.' };
+      return {
+        message:
+          'If an account exists with this email, a reset link has been sent.',
+      };
     }
 
     // Generate a temporary password
@@ -167,10 +215,16 @@ export class AuthService {
       await student.save();
 
       // Send reset email
-      this.emailService.sendCustomEmail(
-        [{ email: student.email, name: `${student.firstName} ${student.lastName}` }],
-        'Password Reset - Glory Admissions Fair',
-        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      this.emailService
+        .sendCustomEmail(
+          [
+            {
+              email: student.email,
+              name: `${student.firstName} ${student.lastName}`,
+            },
+          ],
+          'Password Reset - Glory Admissions Fair',
+          `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Password Reset</h2>
           <p>Dear ${student.firstName},</p>
           <p>Your password has been reset. Here are your new credentials:</p>
@@ -182,17 +236,19 @@ export class AuthService {
           <p>If you did not request this reset, please contact support.</p>
           <p>Best regards,<br>Glory Educational Consultancy</p>
         </div>`,
-      ).catch(() => {});
+        )
+        .catch(() => {});
     }
 
     if (user) {
       user.password = hashedPassword;
       await user.save();
 
-      this.emailService.sendCustomEmail(
-        [{ email: user.email, name: `${user.firstName} ${user.lastName}` }],
-        'Password Reset - Glory Admissions Fair',
-        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      this.emailService
+        .sendCustomEmail(
+          [{ email: user.email, name: `${user.firstName} ${user.lastName}` }],
+          'Password Reset - Glory Admissions Fair',
+          `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Password Reset</h2>
           <p>Dear ${user.firstName},</p>
           <p>Your password has been reset. Here are your new credentials:</p>
@@ -204,13 +260,22 @@ export class AuthService {
           <p>If you did not request this reset, please contact support.</p>
           <p>Best regards,<br>Glory Educational Consultancy</p>
         </div>`,
-      ).catch(() => {});
+        )
+        .catch(() => {});
     }
 
-    return { message: 'If an account exists with this email, a reset link has been sent.' };
+    return {
+      message:
+        'If an account exists with this email, a reset link has been sent.',
+    };
   }
 
-  private generateToken(payload: { sub: string; email: string; role: string; type: string }) {
+  private generateToken(payload: {
+    sub: string;
+    email: string;
+    role: string;
+    type: string;
+  }) {
     return this.jwtService.sign(payload);
   }
 }

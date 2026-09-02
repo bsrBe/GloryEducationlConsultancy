@@ -1,4 +1,11 @@
-import { IsEmail, IsString, IsEnum, IsOptional, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  MinLength,
+} from 'class-validator';
 import { UserRole } from '../schemas/user.schema';
 
 export class UpdateUserDto {
@@ -28,5 +35,10 @@ export class UpdateUserDto {
   university?: string;
 
   @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }

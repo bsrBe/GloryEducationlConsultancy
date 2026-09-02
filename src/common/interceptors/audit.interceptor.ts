@@ -1,4 +1,9 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditService } from '../../audit/audit.service';
@@ -17,8 +22,12 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // Skip audit for certain endpoints
-    const skipAudit = ['/api/auth/login', '/api/auth/profile', '/api/messages/unread'];
-    if (skipAudit.some(path => url.includes(path))) {
+    const skipAudit = [
+      '/api/auth/login',
+      '/api/auth/profile',
+      '/api/messages/unread',
+    ];
+    if (skipAudit.some((path) => url.includes(path))) {
       return next.handle();
     }
 
@@ -29,16 +38,11 @@ export class AuditInterceptor implements NestInterceptor {
           const userId = user?._id?.toString();
           const studentId = body?.studentId || this.extractStudentId(url);
 
-          await this.auditService.log(
-            userId,
-            action,
-            studentId,
-            {
-              method,
-              url,
-              body: this.sanitizeBody(body),
-            },
-          );
+          await this.auditService.log(userId, action, studentId, {
+            method,
+            url,
+            body: this.sanitizeBody(body),
+          });
         } catch (error) {
           // Don't let audit errors break the request
         }

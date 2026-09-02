@@ -18,17 +18,25 @@ export class UniversitiesService {
 
   async findAll(activeOnly = false) {
     const filter = activeOnly ? { isActive: true } : {};
-    return this.universityModel.find(filter).populate('representative', '-password').lean();
+    return this.universityModel
+      .find(filter)
+      .populate('representative', '-password')
+      .lean();
   }
 
   async findById(id: string) {
-    const uni = await this.universityModel.findById(id).populate('representative', '-password').lean();
+    const uni = await this.universityModel
+      .findById(id)
+      .populate('representative', '-password')
+      .lean();
     if (!uni) throw new NotFoundException('University not found');
     return uni;
   }
 
   async update(id: string, dto: UpdateUniversityDto) {
-    const uni = await this.universityModel.findByIdAndUpdate(id, dto, { new: true }).lean();
+    const uni = await this.universityModel
+      .findByIdAndUpdate(id, dto, { new: true })
+      .lean();
     if (!uni) throw new NotFoundException('University not found');
     return uni;
   }
@@ -39,6 +47,9 @@ export class UniversitiesService {
 
     uni.isActive = !uni.isActive;
     await uni.save();
-    return { message: `University ${uni.isActive ? 'activated' : 'deactivated'}`, university: uni };
+    return {
+      message: `University ${uni.isActive ? 'activated' : 'deactivated'}`,
+      university: uni,
+    };
   }
 }

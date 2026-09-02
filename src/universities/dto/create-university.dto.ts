@@ -1,4 +1,11 @@
-import { IsString, IsBoolean, IsOptional, IsArray, ValidateNested, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsNumber,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateProgramDto {
@@ -10,6 +17,7 @@ export class CreateProgramDto {
   degreeLevel?: string;
 
   @IsOptional()
+  @IsNumber()
   gpaRequirement?: number;
 
   @IsOptional()
@@ -39,8 +47,14 @@ export class CreateUniversityDto {
   representative?: string;
 
   @IsOptional()
+  @IsNumber()
   reviewCapacity?: number;
 
   @IsOptional()
+  @IsBoolean()
   liveSessionAvailable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

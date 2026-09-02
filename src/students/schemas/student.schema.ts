@@ -19,7 +19,11 @@ export class Payment {
   @Prop({ default: Date.now })
   date: Date;
 
-  @Prop({ required: true, enum: ['Pending', 'Verified', 'Failed', 'Refunded', 'Credited'], default: 'Pending' })
+  @Prop({
+    required: true,
+    enum: ['Pending', 'Verified', 'Failed', 'Refunded', 'Credited'],
+    default: 'Pending',
+  })
   status: string;
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
@@ -46,11 +50,15 @@ export class StudentDocumentEntry {
   @Prop({ default: 1 })
   version: number;
 
-  @Prop({ enum: ['Not Uploaded', 'Uploaded', 'Reviewed', 'Needs Replacement'], default: 'Not Uploaded' })
+  @Prop({
+    enum: ['Not Uploaded', 'Uploaded', 'Reviewed', 'Needs Replacement'],
+    default: 'Not Uploaded',
+  })
   reviewStatus: string;
 }
 
-export const StudentDocumentEntrySchema = SchemaFactory.createForClass(StudentDocumentEntry);
+export const StudentDocumentEntrySchema =
+  SchemaFactory.createForClass(StudentDocumentEntry);
 
 @Schema({ _id: false })
 export class Assessment {
@@ -159,7 +167,18 @@ export class EventInfo {
 @Schema({ _id: false })
 export class Application {
   @Prop({
-    enum: ['Interested', 'Consultation', 'AppStarted', 'DocsComplete', 'Submitted', 'Offer', 'I20', 'Visa', 'Completed', 'Lost'],
+    enum: [
+      'Interested',
+      'Consultation',
+      'AppStarted',
+      'DocsComplete',
+      'Submitted',
+      'Offer',
+      'I20',
+      'Visa',
+      'Completed',
+      'Lost',
+    ],
     default: 'Interested',
   })
   stage: string;
@@ -229,11 +248,32 @@ export class Student {
   @Prop()
   englishScore: number;
 
-  @Prop({ default: false })
-  passportAvailable: boolean;
+  @Prop()
+  dateOfBirth: string;
 
   @Prop()
-  budget: number;
+  gender: string;
+
+  @Prop()
+  city: string;
+
+  @Prop()
+  institution: string;
+
+  @Prop()
+  programInterest: string;
+
+  @Prop()
+  countryPreference: string;
+
+  @Prop()
+  englishProficiency: string;
+
+  @Prop({ type: Object })
+  budget: any;
+
+  @Prop({ type: Object })
+  financialBudget: any;
 
   @Prop()
   intake: string;
@@ -270,3 +310,11 @@ export class Student {
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);
+
+StudentSchema.index({ createdAt: -1 });
+StudentSchema.index({ 'payments.status': 1 });
+StudentSchema.index({ 'representativeReview.decision': 1 });
+StudentSchema.index({ 'matches.status': 1 });
+StudentSchema.index({ 'matches.primary.university': 1 });
+StudentSchema.index({ 'application.stage': 1 });
+StudentSchema.index({ influencerSource: 1 });

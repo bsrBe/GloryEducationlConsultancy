@@ -12,8 +12,9 @@ export class MatchDto {
 }
 
 export class ApproveMatchDto {
+  @IsOptional()
   @IsEnum(['approved', 'rejected'])
-  status: string;
+  status?: string;
 
   @IsOptional()
   @IsString()

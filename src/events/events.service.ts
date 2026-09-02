@@ -1,8 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Event, EventDocument } from './schemas/event.schema';
-import { CreateEventDto, UpdateEventDto, CreateSessionDto, AssignStudentsDto, CheckInDto } from './dto/event.dto';
+import {
+  CreateEventDto,
+  UpdateEventDto,
+  CreateSessionDto,
+  AssignStudentsDto,
+  CheckInDto,
+} from './dto/event.dto';
 
 @Injectable()
 export class EventsService {
@@ -25,11 +36,15 @@ export class EventsService {
   }
 
   async findById(id: string) {
-    const event = await this.eventModel.findById(id)
+    const event = await this.eventModel
+      .findById(id)
       .populate('moderators', 'firstName lastName email')
       .populate('sessions.university', 'name destination')
       .populate('sessions.representative', 'firstName lastName email')
-      .populate('sessions.assignedStudents', 'studentId firstName lastName email')
+      .populate(
+        'sessions.assignedStudents',
+        'studentId firstName lastName email',
+      )
       .populate('checkIns.student', 'studentId firstName lastName')
       .lean();
     if (!event) throw new NotFoundException('Event not found');
@@ -37,7 +52,9 @@ export class EventsService {
   }
 
   async update(id: string, dto: UpdateEventDto) {
-    const event = await this.eventModel.findByIdAndUpdate(id, dto, { new: true }).lean();
+    const event = await this.eventModel
+      .findByIdAndUpdate(id, dto, { new: true })
+      .lean();
     if (!event) throw new NotFoundException('Event not found');
     return event;
   }
@@ -56,8 +73,12 @@ export class EventsService {
     const session = {
       name: dto.name,
       destination: dto.destination,
-      university: dto.university ? new Types.ObjectId(dto.university) : undefined,
-      representative: dto.representative ? new Types.ObjectId(dto.representative) : undefined,
+      university: dto.university
+        ? new Types.ObjectId(dto.university)
+        : undefined,
+      representative: dto.representative
+        ? new Types.ObjectId(dto.representative)
+        : undefined,
       time: dto.time,
       roomLink: dto.roomLink,
       capacity: dto.capacity || 50,
@@ -69,16 +90,22 @@ export class EventsService {
     return { message: 'Session added', session };
   }
 
-  async updateSession(eventId: string, sessionIndex: number, dto: Partial<CreateSessionDto>) {
+  async updateSession(
+    eventId: string,
+    sessionIndex: number,
+    dto: Partial<CreateSessionDto>,
+  ) {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
-    if (!event.sessions[sessionIndex]) throw new BadRequestException('Session not found');
+    if (!event.sessions[sessionIndex])
+      throw new BadRequestException('Session not found');
 
     const session = event.sessions[sessionIndex];
     if (dto.name) session.name = dto.name;
     if (dto.destination) session.destination = dto.destination;
     if (dto.university) session.university = new Types.ObjectId(dto.university);
-    if (dto.representative) session.representative = new Types.ObjectId(dto.representative);
+    if (dto.representative)
+      session.representative = new Types.ObjectId(dto.representative);
     if (dto.time) session.time = dto.time;
     if (dto.roomLink) session.roomLink = dto.roomLink;
     if (dto.capacity) session.capacity = dto.capacity;
@@ -90,7 +117,8 @@ export class EventsService {
   async deleteSession(eventId: string, sessionIndex: number) {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
-    if (!event.sessions[sessionIndex]) throw new BadRequestException('Session not found');
+    if (!event.sessions[sessionIndex])
+      throw new BadRequestException('Session not found');
 
     event.sessions.splice(sessionIndex, 1);
     await event.save();
@@ -98,17 +126,22 @@ export class EventsService {
   }
 
   // --- Student Assignment ---
-  async assignStudents(eventId: string, sessionIndex: number, dto: AssignStudentsDto) {
+  async assignStudents(
+    eventId: string,
+    sessionIndex: number,
+    dto: AssignStudentsDto,
+  ) {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
-    if (!event.sessions[sessionIndex]) throw new BadRequestException('Session not found');
+    if (!event.sessions[sessionIndex])
+      throw new BadRequestException('Session not found');
 
     const session = event.sessions[sessionIndex];
-    const studentIds = dto.studentIds.map(id => new Types.ObjectId(id));
+    const studentIds = dto.studentIds.map((id) => new Types.ObjectId(id));
 
     // Add new students (avoid duplicates)
     for (const id of studentIds) {
-      if (!session.assignedStudents.some(s => s.equals(id))) {
+      if (!session.assignedStudents.some((s) => s.equals(id))) {
         session.assignedStudents.push(id);
       }
     }
@@ -117,14 +150,19 @@ export class EventsService {
     return { message: `${studentIds.length} students assigned`, session };
   }
 
-  async removeStudent(eventId: string, sessionIndex: number, studentId: string) {
+  async removeStudent(
+    eventId: string,
+    sessionIndex: number,
+    studentId: string,
+  ) {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
-    if (!event.sessions[sessionIndex]) throw new BadRequestException('Session not found');
+    if (!event.sessions[sessionIndex])
+      throw new BadRequestException('Session not found');
 
     const session = event.sessions[sessionIndex];
     session.assignedStudents = session.assignedStudents.filter(
-      s => !s.equals(new Types.ObjectId(studentId)),
+      (s) => !s.equals(new Types.ObjectId(studentId)),
     );
 
     await event.save();
@@ -137,8 +175,8 @@ export class EventsService {
     if (!event) throw new NotFoundException('Event not found');
 
     // Check if student already checked in
-    const existingCheckIn = event.checkIns.find(
-      ci => ci.student.equals(new Types.ObjectId(studentId)),
+    const existingCheckIn = event.checkIns.find((ci) =>
+      ci.student.equals(new Types.ObjectId(studentId)),
     );
 
     if (existingCheckIn) {
@@ -173,7 +211,8 @@ export class EventsService {
 
   // --- Attendance Reports ---
   async getAttendanceReport(eventId: string) {
-    const event = await this.eventModel.findById(eventId)
+    const event = await this.eventModel
+      .findById(eventId)
       .populate('checkIns.student', 'studentId firstName lastName email')
       .populate('checkIns.session', 'name destination')
       .lean();
@@ -181,15 +220,18 @@ export class EventsService {
     if (!event) throw new NotFoundException('Event not found');
 
     const totalAssigned = event.sessions.reduce(
-      (sum, s) => sum + (s.assignedStudents?.length || 0), 0,
+      (sum, s) => sum + (s.assignedStudents?.length || 0),
+      0,
     );
 
-    const totalCheckedIn = event.checkIns.filter(ci => ci.attended).length;
+    const totalCheckedIn = event.checkIns.filter((ci) => ci.attended).length;
     const totalNoShows = totalAssigned - totalCheckedIn;
 
-    const bySession = event.sessions.map(session => {
+    const bySession = event.sessions.map((session) => {
       const sessionCheckIns = event.checkIns.filter(
-        ci => ci.session?.toString() === (session as any)._id?.toString() && ci.attended,
+        (ci) =>
+          ci.session?.toString() === (session as any)._id?.toString() &&
+          ci.attended,
       );
       return {
         sessionId: (session as any)._id,
@@ -197,7 +239,8 @@ export class EventsService {
         destination: session.destination,
         assigned: session.assignedStudents?.length || 0,
         attended: sessionCheckIns.length,
-        noShows: (session.assignedStudents?.length || 0) - sessionCheckIns.length,
+        noShows:
+          (session.assignedStudents?.length || 0) - sessionCheckIns.length,
       };
     });
 
@@ -214,19 +257,20 @@ export class EventsService {
   }
 
   async getStudentSessions(eventId: string, studentId: string) {
-    const event = await this.eventModel.findById(eventId)
+    const event = await this.eventModel
+      .findById(eventId)
       .populate('sessions.university', 'name destination')
       .populate('sessions.representative', 'firstName lastName')
       .lean();
 
     if (!event) throw new NotFoundException('Event not found');
 
-    const assignedSessions = event.sessions.filter(s =>
-      s.assignedStudents?.some(sa => sa.toString() === studentId),
+    const assignedSessions = event.sessions.filter((s) =>
+      s.assignedStudents?.some((sa) => sa.toString() === studentId),
     );
 
     const checkIn = event.checkIns.find(
-      ci => ci.student.toString() === studentId,
+      (ci) => ci.student.toString() === studentId,
     );
 
     return {

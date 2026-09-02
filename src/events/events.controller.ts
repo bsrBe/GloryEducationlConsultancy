@@ -1,10 +1,23 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Body, Param, UseGuards, Request,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { EventsService } from './events.service';
-import { CreateEventDto, UpdateEventDto, CreateSessionDto, AssignStudentsDto, CheckInDto } from './dto/event.dto';
+import {
+  CreateEventDto,
+  UpdateEventDto,
+  CreateSessionDto,
+  AssignStudentsDto,
+  CheckInDto,
+} from './dto/event.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../users/schemas/user.schema';
@@ -97,7 +110,11 @@ export class EventsController {
     @Param('sessionIndex') sessionIndex: string,
     @Param('studentId') studentId: string,
   ) {
-    return this.eventsService.removeStudent(id, parseInt(sessionIndex), studentId);
+    return this.eventsService.removeStudent(
+      id,
+      parseInt(sessionIndex),
+      studentId,
+    );
   }
 
   // --- Check-In / Attendance ---

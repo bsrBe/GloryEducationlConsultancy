@@ -1,4 +1,12 @@
-import { IsEmail, IsString, IsEnum, IsOptional, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  MinLength,
+} from 'class-validator';
 
 export enum StudentRole {
   STUDENT = 'student',
@@ -22,6 +30,19 @@ export class RegisterStudentDto {
   phone: string;
 
   @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
+
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsNumber()
   age?: number;
 
   @IsOptional()
@@ -33,9 +54,15 @@ export class RegisterStudentDto {
   school?: string;
 
   @IsOptional()
+  @IsString()
+  institution?: string;
+
+  @IsOptional()
+  @IsNumber()
   gpa?: number;
 
   @IsOptional()
+  @IsNumber()
   graduationYear?: number;
 
   @IsOptional()
@@ -44,14 +71,37 @@ export class RegisterStudentDto {
 
   @IsOptional()
   @IsString()
+  programInterest?: string;
+
+  @IsOptional()
+  @IsString()
   preferredCountry?: string;
+
+  @IsOptional()
+  @IsString()
+  countryPreference?: string;
 
   @IsOptional()
   @IsString()
   englishTest?: string;
 
   @IsOptional()
+  @IsString()
+  englishProficiency?: string;
+
+  @IsOptional()
+  @IsNumber()
   englishScore?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  passportAvailable?: boolean;
+
+  @IsOptional()
+  budget?: any;
+
+  @IsOptional()
+  financialBudget?: any;
 
   @IsOptional()
   @IsString()

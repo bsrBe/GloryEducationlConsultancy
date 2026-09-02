@@ -14,6 +14,23 @@ export class UpdateProfileDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
+
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsNumber()
   age?: number;
 
   @IsOptional()
@@ -25,9 +42,15 @@ export class UpdateProfileDto {
   school?: string;
 
   @IsOptional()
+  @IsString()
+  institution?: string;
+
+  @IsOptional()
+  @IsNumber()
   gpa?: number;
 
   @IsOptional()
+  @IsNumber()
   graduationYear?: number;
 
   @IsOptional()
@@ -36,7 +59,15 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  programInterest?: string;
+
+  @IsOptional()
+  @IsString()
   preferredCountry?: string;
+
+  @IsOptional()
+  @IsString()
+  countryPreference?: string;
 
   @IsOptional()
   @IsString()
@@ -47,13 +78,22 @@ export class UpdateProfileDto {
   englishTest?: string;
 
   @IsOptional()
+  @IsString()
+  englishProficiency?: string;
+
+  @IsOptional()
+  @IsNumber()
   englishScore?: number;
 
   @IsOptional()
+  @IsBoolean()
   passportAvailable?: boolean;
 
   @IsOptional()
-  budget?: number;
+  budget?: any;
+
+  @IsOptional()
+  financialBudget?: any;
 
   @IsOptional()
   @IsString()

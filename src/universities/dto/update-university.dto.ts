@@ -1,4 +1,11 @@
-import { IsString, IsBoolean, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsNumber,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProgramDto } from './create-university.dto';
 
@@ -22,11 +29,14 @@ export class UpdateUniversityDto {
   representative?: string;
 
   @IsOptional()
+  @IsNumber()
   reviewCapacity?: number;
 
   @IsOptional()
+  @IsBoolean()
   liveSessionAvailable?: boolean;
 
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }
