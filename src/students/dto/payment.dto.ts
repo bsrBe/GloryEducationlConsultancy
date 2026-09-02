@@ -1,8 +1,12 @@
 import { IsString, IsNumber, IsEnum, IsOptional } from 'class-validator';
 
 export class CreatePaymentDto {
-  @IsEnum(['telebirr', 'bank_transfer', 'bank', 'cash'])
+  @IsEnum(['telebirr', 'bank_transfer', 'bank', 'cash', 'cbe', 'boa'])
   method: string;
+
+  @IsOptional()
+  @IsString()
+  provider?: string;
 
   @IsOptional()
   @IsString()
@@ -11,6 +15,10 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   reference?: string;
+
+  @IsOptional()
+  @IsString()
+  receiptUrl?: string;
 
   @IsOptional()
   @IsString()

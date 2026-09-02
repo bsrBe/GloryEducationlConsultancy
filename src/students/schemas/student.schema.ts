@@ -7,7 +7,7 @@ export type StudentDoc = Student & Document;
 
 @Schema({ _id: false })
 export class Payment {
-  @Prop({ required: true, enum: ['telebirr', 'bank_transfer', 'cash'] })
+  @Prop({ required: true, enum: ['telebirr', 'bank_transfer', 'cash', 'cbe', 'boa'] })
   method: string;
 
   @Prop({ required: true })
@@ -31,6 +31,15 @@ export class Payment {
 
   @Prop()
   verifiedAt: Date;
+
+  @Prop()
+  verificationProvider?: string;
+
+  @Prop()
+  verificationDetails?: string;
+
+  @Prop()
+  receiptUrl?: string;
 }
 
 @Schema({ _id: false })

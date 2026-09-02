@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -17,6 +18,7 @@ import { CreateReviewDto } from './dto/review.dto';
 import { PublishResultDto } from './dto/result.dto';
 import { EmailService } from '../email/email.service';
 import { CountersService } from '../counters/counters.service';
+import { PaymentVerificationService } from './payment-verification.service';
 
 @Injectable()
 export class StudentsService {
@@ -24,6 +26,7 @@ export class StudentsService {
     @InjectModel(Student.name) private studentModel: Model<StudentDoc>,
     private emailService: EmailService,
     private countersService: CountersService,
+    private paymentVerificationService: PaymentVerificationService,
   ) {}
 
   async generateStudentId(): Promise<string> {
@@ -124,36 +127,143 @@ export class StudentsService {
   async addPayment(studentId: string, dto: CreatePaymentDto) {
     const student = await this.studentModel.findById(studentId);
     if (!student) throw new NotFoundException('Student not found');
+
     const method = dto.method === 'bank' ? 'bank_transfer' : dto.method;
-    const transactionRef = dto.transactionRef || dto.reference || `REF-${Date.now().toString(36).toUpperCase()}`;
-    student.payments.push({
+    const provider = dto.provider || method;
+    const inputRef = (dto.receiptUrl || dto.transactionRef || dto.reference || '').trim();
+    const transactionRef = inputRef || `REF-${Date.now().toString(36).toUpperCase()}`;
+
+    // Anti-fraud check: has this reference already been verified for another student?
+    if (inputRef) {
+      const existingVerified = await this.studentModel.findOne({
+        _id: { $ne: student._id },
+        'payments.transactionRef': inputRef,
+        'payments.status': 'Verified',
+      });
+      if (existingVerified) {
+        throw new ConflictException(
+          'This transaction reference has already been verified for another student account.',
+        );
+      }
+    }
+
+    // Automated verification via links.et
+    let isVerified = false;
+    let verificationNote = '';
+    let finalAmount = dto.amount;
+    let finalRef = transactionRef;
+    let verifiedProvider = provider;
+    let verifiedDetails: string | undefined = undefined;
+    let receiptUrl: string | undefined = dto.receiptUrl;
+
+    if (
+      ['telebirr', 'cbe', 'boa', 'bank_transfer'].includes(method) ||
+      ['telebirr', 'cbe', 'boa'].includes(provider)
+    ) {
+      if (inputRef) {
+        const verifyRes = await this.paymentVerificationService.verifyReceipt(
+          provider,
+          inputRef,
+        );
+
+        if (verifyRes.verified) {
+          isVerified = true;
+          finalAmount = verifyRes.amount ?? dto.amount;
+          finalRef = verifyRes.receiptNo ?? transactionRef;
+          verifiedProvider = verifyRes.providerKey ?? provider;
+          receiptUrl = verifyRes.receiptUrl ?? receiptUrl;
+          verifiedDetails = JSON.stringify({
+            payerName: verifyRes.payerName,
+            receiverName: verifyRes.receiverName,
+            paymentDate: verifyRes.paymentDate,
+          });
+
+          // Second duplicate check with the upstream official receipt number
+          if (verifyRes.receiptNo && verifyRes.receiptNo !== inputRef) {
+            const existingReceiptNo = await this.studentModel.findOne({
+              _id: { $ne: student._id },
+              'payments.transactionRef': verifyRes.receiptNo,
+              'payments.status': 'Verified',
+            });
+            if (existingReceiptNo) {
+              throw new ConflictException(
+                'This transaction receipt has already been claimed and verified for another student.',
+              );
+            }
+          }
+        } else {
+          verificationNote = verifyRes.reason || 'Automated verification failed.';
+        }
+      }
+    }
+
+    const newPayment: any = {
       method,
-      transactionRef,
-      amount: dto.amount,
+      transactionRef: finalRef,
+      amount: finalAmount,
       date: new Date(),
-      status: 'Pending',
-    } as any);
+      status: isVerified ? 'Verified' : 'Pending',
+      verifiedAt: isVerified ? new Date() : undefined,
+      verificationProvider: verifiedProvider,
+      verificationDetails: verifiedDetails,
+      receiptUrl: receiptUrl,
+    };
+
+    student.payments.push(newPayment);
     await student.save();
 
-    // Send payment received email
-    this.emailService
-      .sendTemplateEmail(
-        'payment_received',
-        {
-          email: student.email,
-          name: `${student.firstName} ${student.lastName}`,
-        },
-        {
-          firstName: student.firstName,
-          studentId: student.studentId,
-          amount: dto.amount.toString(),
-          method,
-          transactionRef,
-        },
-      )
-      .catch(() => {});
+    if (isVerified) {
+      // Send payment verified email
+      this.emailService
+        .sendTemplateEmail(
+          'payment_verified',
+          {
+            email: student.email,
+            name: `${student.firstName} ${student.lastName}`,
+          },
+          {
+            firstName: student.firstName,
+            studentId: student.studentId,
+            amount: finalAmount.toString(),
+            method,
+            transactionRef: finalRef,
+          },
+        )
+        .catch(() => {});
 
-    return { message: 'Payment recorded', payments: student.payments };
+      return {
+        message: 'Payment verified successfully! Your Admissions Fair Pass is active.',
+        verified: true,
+        payments: student.payments,
+      };
+    } else {
+      // Send payment received (pending) email
+      this.emailService
+        .sendTemplateEmail(
+          'payment_received',
+          {
+            email: student.email,
+            name: `${student.firstName} ${student.lastName}`,
+          },
+          {
+            firstName: student.firstName,
+            studentId: student.studentId,
+            amount: finalAmount.toString(),
+            method,
+            transactionRef: finalRef,
+          },
+        )
+        .catch(() => {});
+
+      return {
+        message: verificationNote
+          ? `Payment recorded. Gateway note: ${verificationNote} Placed in queue for manual staff verification.`
+          : 'Payment recorded and is pending staff verification.',
+        verified: false,
+        reason: verificationNote,
+        payments: student.payments,
+      };
+    }
   }
 
   async verifyPayment(
