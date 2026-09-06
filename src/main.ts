@@ -42,10 +42,10 @@ async function bootstrap() {
   // Graceful shutdown
   app.enableShutdownHooks();
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
+  const port = process.env.PORT ?? 5000;
+  await app.listen(port, '0.0.0.0');
   console.log(
-    `🚀 Glory Admissions API running on http://localhost:${port}/api`,
+    `🚀 Glory Admissions API running on port ${port}/api`,
   );
 }
 bootstrap();
