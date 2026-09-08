@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import * as crypto from 'crypto';
 import { Event, EventDocument } from './schemas/event.schema';
 import { Student, StudentDoc } from '../students/schemas/student.schema';
+import { DailyService } from '../daily/daily.service';
 import {
   CreateEventDto,
   UpdateEventDto,
@@ -24,6 +24,7 @@ export class EventsService {
   constructor(
     @InjectModel(Event.name) private eventModel: Model<EventDocument>,
     @InjectModel(Student.name) private studentModel: Model<StudentDoc>,
+    private readonly dailyService: DailyService,
   ) {}
 
   // --- Event CRUD ---
@@ -294,7 +295,7 @@ export class EventsService {
     };
   }
 
-  // --- Jitsi Video Room Access Gate (Paywall + Time Gate + Obfuscation) ---
+  // --- Daily.co Video Room Access Gate (Paywall + Time Gate) ---
   async joinRoom(eventId: string, user: any, dto: JoinEventDto) {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
@@ -349,21 +350,29 @@ export class EventsService {
       }
     }
 
-    // 4. Generate Cryptographic High-Entropy Room Name
-    const secret = process.env.JWT_SECRET || 'glory-edu-admissions-secret-2026';
-    const rawKey = `${event._id}_${dto.sessionIndex !== undefined ? `track_${dto.sessionIndex}` : 'main'}_${event.name}`;
-    const hash = crypto
-      .createHmac('sha256', secret)
-      .update(rawKey)
-      .digest('hex')
-      .substring(0, 18);
-
+    // 4. Generate Daily.co room name
     const safeEventSlug = event.name
       .replace(/[^a-zA-Z0-9]/g, '')
       .substring(0, 12);
-    const roomName = `GloryFair_${safeEventSlug}_${dto.sessionIndex !== undefined ? `Track${dto.sessionIndex + 1}_` : 'Plenary_'}${hash}`;
+    const roomName = dto.sessionIndex !== undefined
+      ? `glory-fair-${safeEventSlug}-track${dto.sessionIndex + 1}`
+      : `glory-fair-${safeEventSlug}-plenary`;
 
-    // 5. Automatic Attendance Check-in for students
+    // 5. Ensure Daily.co room exists
+    await this.dailyService.createRoom(roomName);
+
+    // 6. Generate a meeting token for this user
+    const displayName = `${user.firstName} ${user.lastName}`;
+    const token = await this.dailyService.getMeetingToken(roomName, {
+      userName: displayName,
+      isOwner: isStaff,
+      enableScreenshare: true,
+      closeTabOnExit: false,
+    });
+
+    const roomUrl = this.dailyService.getRoomUrl(roomName);
+
+    // 7. Automatic Attendance Check-in for students
     if (studentProfile) {
       await this.checkIn(eventId, studentProfile._id.toString(), {
         sessionId: targetSession
@@ -378,9 +387,9 @@ export class EventsService {
       : ` (${user.role || 'Guest'})`;
 
     return {
-      domain: process.env.JITSI_DOMAIN || 'meet.jit.si',
-      roomName,
-      displayName: `${user.firstName} ${user.lastName}${studentIdBadge}`,
+      roomUrl,
+      token,
+      displayName: `${displayName}${studentIdBadge}`,
       email: user.email,
       isModerator: isStaff,
       eventName: event.name,
