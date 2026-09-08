@@ -352,7 +352,8 @@ export class EventsService {
 
     // 4. Generate Daily.co room name
     const safeEventSlug = event.name
-      .replace(/[^a-zA-Z0-9]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
       .substring(0, 12);
     const roomName = dto.sessionIndex !== undefined
       ? `glory-fair-${safeEventSlug}-track${dto.sessionIndex + 1}`

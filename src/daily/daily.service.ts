@@ -101,34 +101,82 @@ export class DailyService {
   /**
    * Generate a meeting token for a specific room.
    * Tokens are short-lived JWTs signed by Daily.co.
+   * Daily.co REST API expects: { properties: { room_name, exp, ... } }
    */
-  async getMeetingToken(roomName: string, opts?: {
-    userName?: string;
-    isOwner?: boolean;
-    expSeconds?: number;
-    enableScreenshare?: boolean;
-    closeTabOnExit?: boolean;
-  }) {
-    const payload: Record<string, any> = {
+  async getMeetingToken(
+    roomName: string,
+    opts?: {
+      userName?: string;
+      isOwner?: boolean;
+      expSeconds?: number;
+      enableScreenshare?: boolean;
+      closeTabOnExit?: boolean;
+    },
+  ) {
+    const tokenProperties: Record<string, any> = {
       room_name: roomName,
       // Token expires in 4 hours by default (enough for a fair session)
       exp: Math.floor(Date.now() / 1000) + (opts?.expSeconds || 4 * 60 * 60),
     };
 
-    if (opts?.userName) payload.user_name = opts.userName;
-    if (opts?.isOwner !== undefined) payload.is_owner = opts.isOwner;
-    if (opts?.enableScreenshare !== undefined) payload.enable_screenshare = opts.enableScreenshare;
-    if (opts?.closeTabOnExit !== undefined) payload.close_tab_on_exit = opts.closeTabOnExit;
+    if (opts?.userName) tokenProperties.user_name = opts.userName;
+    if (opts?.isOwner !== undefined) tokenProperties.is_owner = opts.isOwner;
+    if (opts?.enableScreenshare !== undefined) tokenProperties.enable_screenshare = opts.enableScreenshare;
+    if (opts?.closeTabOnExit !== undefined) tokenProperties.close_tab_on_exit = opts.closeTabOnExit;
 
     try {
+      this.logger.debug(
+        `Requesting Daily meeting token for room "${roomName}" with properties: ${JSON.stringify(tokenProperties)}`,
+      );
+
+      // Daily.co API strictly expects { properties: { ... } }
       const res = await axios.post(
         `${this.baseUrl}/meeting-tokens`,
-        payload,
+        { properties: tokenProperties },
         { headers: this.headers },
       );
       return res.data.token; // Daily returns { token: "..." }
     } catch (err: any) {
-      this.logger.error(`Failed to generate meeting token for "${roomName}": ${err.message}`);
+      const detail = err.response?.data
+        ? JSON.stringify(err.response.data)
+        : err.message;
+      this.logger.error(
+        `Failed to generate meeting token for "${roomName}". Daily API response: ${detail}`,
+      );
+
+      // If Daily rejected with 400, retry with minimal properties in case optional settings are plan-restricted
+      if (err.response?.status === 400) {
+        try {
+          this.logger.warn(
+            `Retrying meeting token for "${roomName}" with minimal properties...`,
+          );
+          const minimalProps: Record<string, any> = {
+            room_name: roomName,
+            is_owner: opts?.isOwner ?? false,
+            exp: Math.floor(Date.now() / 1000) + (opts?.expSeconds || 4 * 60 * 60),
+          };
+          if (opts?.userName) minimalProps.user_name = opts.userName;
+
+          const retryRes = await axios.post(
+            `${this.baseUrl}/meeting-tokens`,
+            { properties: minimalProps },
+            { headers: this.headers },
+          );
+          this.logger.log(
+            `Successfully generated meeting token with minimal properties for "${roomName}"`,
+          );
+          return retryRes.data.token;
+        } catch (retryErr: any) {
+          const retryDetail = retryErr.response?.data
+            ? JSON.stringify(retryErr.response.data)
+            : retryErr.message;
+          this.logger.error(
+            `Retry meeting token generation for "${roomName}" also failed: ${retryDetail}`,
+          );
+          throw retryErr;
+        }
+      }
+
       throw err;
     }
   }
@@ -137,6 +185,9 @@ export class DailyService {
    * Build the full room URL for embedding.
    */
   getRoomUrl(roomName: string): string {
-    return `https://${this.domain}/${roomName}`;
+    const cleanDomain = (this.domain || '')
+      .replace(/^https?:\/\//, '')
+      .replace(/\/+$/, '');
+    return `https://${cleanDomain}/${roomName}`;
   }
 }
