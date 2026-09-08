@@ -32,13 +32,13 @@ export class DailyService {
         {
           name,
           privacy: opts?.privacy || 'private',
-          max_participants: opts?.maxParticipants || 50,
-          // Enable chat, screenshare for all
-          enable_chat: true,
-          enable_screenshare: true,
-          enable_recording: false,
-          // Auto-create if not exists (avoid 409 conflict)
-          auto_create_room: true,
+          properties: {
+            max_participants: opts?.maxParticipants || 50,
+            enable_chat: true,
+            enable_screenshare: true,
+            enable_hand_raising: true,
+            enable_emoji_reactions: true,
+          },
         },
         { headers: this.headers },
       );
@@ -48,7 +48,8 @@ export class DailyService {
       if (err.response?.status === 409) {
         return this.getRoom(name);
       }
-      this.logger.error(`Failed to create Daily room "${name}": ${err.message}`);
+      const detail = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+      this.logger.error(`Failed to create Daily room "${name}": ${detail}`);
       throw err;
     }
   }
