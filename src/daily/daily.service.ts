@@ -26,19 +26,28 @@ export class DailyService {
    * If the room already exists, Daily returns it (idempotent by name).
    */
   async createRoom(name: string, opts?: { privacy?: string; maxParticipants?: number }) {
+    const properties: Record<string, any> = {
+      enable_chat: true,
+      enable_screenshare: true,
+      enable_hand_raising: true,
+      enable_emoji_reactions: true,
+    };
+
+    // max_participants is plan-gated on Daily.co (free plan rejects high values).
+    // Only set it when explicitly configured via env (DAILY_MAX_PARTICIPANTS) or opts.
+    const maxParticipants =
+      opts?.maxParticipants ?? this.config.get<number>('DAILY_MAX_PARTICIPANTS');
+    if (maxParticipants) {
+      properties.max_participants = maxParticipants;
+    }
+
     try {
       const res = await axios.post(
         `${this.baseUrl}/rooms`,
         {
           name,
           privacy: opts?.privacy || 'private',
-          properties: {
-            max_participants: opts?.maxParticipants || 50,
-            enable_chat: true,
-            enable_screenshare: true,
-            enable_hand_raising: true,
-            enable_emoji_reactions: true,
-          },
+          properties,
         },
         { headers: this.headers },
       );
@@ -48,6 +57,31 @@ export class DailyService {
       if (err.response?.status === 409) {
         return this.getRoom(name);
       }
+
+      // 400 = likely a plan-restricted property → retry with minimal config
+      if (err.response?.status === 400) {
+        try {
+          const res = await axios.post(
+            `${this.baseUrl}/rooms`,
+            { name, privacy: opts?.privacy || 'private' },
+            { headers: this.headers },
+          );
+          this.logger.warn(
+            `Created Daily room "${name}" with minimal properties (plan restrictions on room config)`,
+          );
+          return res.data;
+        } catch (retryErr: any) {
+          if (retryErr.response?.status === 409) {
+            return this.getRoom(name);
+          }
+          const retryDetail = retryErr.response?.data
+            ? JSON.stringify(retryErr.response.data)
+            : retryErr.message;
+          this.logger.error(`Failed to create Daily room "${name}": ${retryDetail}`);
+          throw retryErr;
+        }
+      }
+
       const detail = err.response?.data ? JSON.stringify(err.response.data) : err.message;
       this.logger.error(`Failed to create Daily room "${name}": ${detail}`);
       throw err;
