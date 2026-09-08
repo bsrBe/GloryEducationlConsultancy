@@ -53,8 +53,14 @@ export class DailyService {
       );
       return res.data;
     } catch (err: any) {
-      // 409 = room already exists — that's fine, return existing
-      if (err.response?.status === 409) {
+      // Daily returns 409 or 400 with "already exists" in info if room already exists
+      const isAlreadyExists =
+        err.response?.status === 409 ||
+        (typeof err.response?.data?.info === 'string' &&
+          err.response.data.info.includes('already exists'));
+
+      if (isAlreadyExists) {
+        this.logger.log(`Daily room "${name}" already exists. Using existing room.`);
         return this.getRoom(name);
       }
 
@@ -71,7 +77,12 @@ export class DailyService {
           );
           return res.data;
         } catch (retryErr: any) {
-          if (retryErr.response?.status === 409) {
+          const retryAlreadyExists =
+            retryErr.response?.status === 409 ||
+            (typeof retryErr.response?.data?.info === 'string' &&
+              retryErr.response.data.info.includes('already exists'));
+
+          if (retryAlreadyExists) {
             return this.getRoom(name);
           }
           const retryDetail = retryErr.response?.data
