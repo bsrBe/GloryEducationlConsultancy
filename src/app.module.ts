@@ -10,7 +10,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AuditModule } from './audit/audit.module';
 import { EmailModule } from './email/email.module';
 import { EventsModule } from './events/events.module';
-import { DailyModule } from './daily/daily.module';
+import { WherebyModule } from './whereby/whereby.module';
 
 @Module({
   imports: [
@@ -38,7 +38,7 @@ import { DailyModule } from './daily/daily.module';
     AuditModule,
     EmailModule,
     EventsModule,
-    DailyModule,
+    WherebyModule,
   ],
 })
 export class AppModule {}

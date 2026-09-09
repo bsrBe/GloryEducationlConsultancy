@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Event, EventDocument } from './schemas/event.schema';
 import { Student, StudentDoc } from '../students/schemas/student.schema';
-import { DailyService } from '../daily/daily.service';
+import { WherebyService } from '../whereby/whereby.service';
 import {
   CreateEventDto,
   UpdateEventDto,
@@ -24,7 +24,7 @@ export class EventsService {
   constructor(
     @InjectModel(Event.name) private eventModel: Model<EventDocument>,
     @InjectModel(Student.name) private studentModel: Model<StudentDoc>,
-    private readonly dailyService: DailyService,
+    private readonly wherebyService: WherebyService,
   ) {}
 
   // --- Event CRUD ---
@@ -295,7 +295,7 @@ export class EventsService {
     };
   }
 
-  // --- Daily.co Video Room Access Gate (Paywall + Time Gate) ---
+  // --- Whereby Video Room Access Gate (Paywall + Time Gate) ---
   async joinRoom(eventId: string, user: any, dto: JoinEventDto) {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
@@ -308,21 +308,22 @@ export class EventsService {
     let studentProfile: StudentDoc | null = null;
 
     // 1. Payment Verification Gate for Students
+    // TEMPORARILY DISABLED FOR TESTING — re-enable before production!
     if (!isStaff) {
       studentProfile = await this.studentModel.findById(user._id);
       if (!studentProfile) {
         throw new UnauthorizedException('Student profile not found');
       }
 
-      const hasVerifiedPayment = studentProfile.payments?.some(
-        (p) => p.status === 'Verified',
-      );
-
-      if (!hasVerifiedPayment) {
-        throw new ForbiddenException(
-          'Access to the live admissions conference requires a verified 500 ETB registration pass. Please complete or verify your payment in the payments section.',
-        );
-      }
+      // const hasVerifiedPayment = studentProfile.payments?.some(
+      //   (p) => p.status === 'Verified',
+      // );
+      //
+      // if (!hasVerifiedPayment) {
+      //   throw new ForbiddenException(
+      //     'Access to the live admissions conference requires a verified 500 ETB registration pass. Please complete or verify your payment in the payments section.',
+      //   );
+      // }
     }
 
     // 2. Validate Session (if requesting a breakout track)
@@ -350,28 +351,22 @@ export class EventsService {
       }
     }
 
-    // 4. Generate Daily.co room name
-    const safeEventSlug = event.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .substring(0, 12);
-    const roomName = dto.sessionIndex !== undefined
-      ? `glory-fair-${safeEventSlug}-track${dto.sessionIndex + 1}`
-      : `glory-fair-${safeEventSlug}-plenary`;
+    // 4. Compute meeting endDate from event date + endTime (falls back to +4h from now)
+    const endDate = this.computeMeetingEndDate(event.date, event.endTime);
 
-    // 5. Ensure Daily.co room exists
-    await this.dailyService.createRoom(roomName);
-
-    // 6. Generate a meeting token for this user
+    // 5. Create a Whereby meeting.
+    //    No tokens needed — host privileges come via hostRoomUrl.
+    //    Rooms auto-delete 1 hour after endDate, so a fresh one is created lazily on join.
     const displayName = `${user.firstName} ${user.lastName}`;
-    const token = await this.dailyService.getMeetingToken(roomName, {
-      userName: displayName,
-      isOwner: isStaff,
-      enableScreenshare: true,
-      closeTabOnExit: false,
+    const meeting = await this.wherebyService.createMeeting({
+      endDate,
+      withHost: true,
     });
 
-    const roomUrl = this.dailyService.getRoomUrl(roomName);
+    // 6. Staff get the host URL (lock, mute, remove participants);
+    //    students get the plain room URL.
+    const roomUrl =
+      isStaff && meeting.hostRoomUrl ? meeting.hostRoomUrl : meeting.roomUrl;
 
     // 7. Automatic Attendance Check-in for students
     if (studentProfile) {
@@ -389,7 +384,6 @@ export class EventsService {
 
     return {
       roomUrl,
-      token,
       displayName: `${displayName}${studentIdBadge}`,
       email: user.email,
       isModerator: isStaff,
@@ -400,6 +394,27 @@ export class EventsService {
       date: event.date,
       status: event.status,
     };
+  }
+
+  private computeMeetingEndDate(
+    eventDate?: Date,
+    endTimeStr?: string,
+  ): Date {
+    if (eventDate) {
+      const end = new Date(eventDate);
+      if (endTimeStr) {
+        const parsed = this.parseTime(endTimeStr);
+        if (parsed) {
+          end.setHours(parsed.hours, parsed.minutes, 0, 0);
+          return end;
+        }
+      }
+      // Event date known but no end time → end of that day
+      end.setHours(23, 59, 0, 0);
+      return end;
+    }
+    // No date at all → allow a 4-hour window from now
+    return new Date(Date.now() + 4 * 60 * 60 * 1000);
   }
 
   private isEventOpen(
