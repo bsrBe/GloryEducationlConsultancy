@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -26,6 +26,17 @@ export class WherebyService {
 
   constructor(private config: ConfigService) {
     this.apiKey = this.config.get<string>('WHEREBY_API_KEY') || '';
+
+    if (!this.apiKey) {
+      this.logger.warn(
+        'WHEREBY_API_KEY is not set — video room creation will fail until it is configured.',
+      );
+    } else {
+      // Never log the key itself — only its shape so misconfigurations are visible.
+      this.logger.log(
+        `Whereby API key loaded (prefix: "${this.apiKey.substring(0, 4)}...", length: ${this.apiKey.length})`,
+      );
+    }
   }
 
   private get headers() {
@@ -69,6 +80,23 @@ export class WherebyService {
       this.logger.error(
         `Failed to create Whereby meeting (HTTP ${status}): ${detail}`,
       );
+
+      // Surface actionable messages to the client instead of a generic 500.
+      if (status === 401) {
+        throw new InternalServerErrorException(
+          'Video provider rejected the server API key. Verify WHEREBY_API_KEY in the backend environment.',
+        );
+      }
+      if (status === 429) {
+        throw new InternalServerErrorException(
+          'Video provider rate limit reached. Please try again in a moment.',
+        );
+      }
+      if (status === 400) {
+        throw new BadRequestException(
+          `Video provider rejected the meeting request: ${detail}`,
+        );
+      }
       throw err;
     }
   }
