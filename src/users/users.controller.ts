@@ -7,11 +7,12 @@ import {
   Body,
   Param,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto, UpdateSelfDto } from './dto/update-user.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from './schemas/user.schema';
@@ -30,6 +31,17 @@ export class UsersController {
   @Get()
   findAll() {
     return this.usersService.findAll();
+  }
+
+  // --- Self-service profile update (any authenticated user) ---
+  // Handler-level @Roles overrides the class-level ADMIN requirement, letting
+  // any logged-in user update their own basic info. Route is declared before
+  // @Patch(':id') so 'me' is not captured as an id.
+  @Patch('me')
+  @Roles(UserRole.ADMIN, UserRole.GLORY_STAFF, UserRole.UNIVERSITY_REP)
+  updateSelf(@Request() req: any, @Body() dto: UpdateSelfDto) {
+    const userId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
+    return this.usersService.updateSelf(userId, dto);
   }
 
   @Get(':id')

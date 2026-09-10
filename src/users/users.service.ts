@@ -8,7 +8,7 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto, UpdateSelfDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -44,6 +44,22 @@ export class UsersService {
 
   async findByEmail(email: string) {
     return this.userModel.findOne({ email: email.toLowerCase() }).lean();
+  }
+
+  /** Self-service update — only the safe profile fields, never role/status. */
+  async updateSelf(id: string, dto: UpdateSelfDto) {
+    const allowed: { firstName?: string; lastName?: string; phone?: string } = {};
+    if (dto.firstName !== undefined) allowed.firstName = dto.firstName.trim();
+    if (dto.lastName !== undefined) allowed.lastName = dto.lastName.trim();
+    if (dto.phone !== undefined) allowed.phone = dto.phone.trim();
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, allowed, { new: true })
+      .select('-password')
+      .lean();
+
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
   async update(id: string, dto: UpdateUserDto) {

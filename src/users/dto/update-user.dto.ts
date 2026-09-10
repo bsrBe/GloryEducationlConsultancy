@@ -4,9 +4,25 @@ import {
   IsEnum,
   IsOptional,
   IsBoolean,
+  IsPhoneNumber,
   MinLength,
 } from 'class-validator';
 import { UserRole } from '../schemas/user.schema';
+
+/** Self-service profile fields any authenticated user may change. */
+export class UpdateSelfDto {
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+}
 
 export class UpdateUserDto {
   @IsOptional()
