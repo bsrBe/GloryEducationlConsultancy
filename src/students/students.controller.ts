@@ -217,6 +217,17 @@ export class StudentsController {
     return this.studentsService.getStudentDashboard(currentId);
   }
 
+  // --- Self-service account deletion ---
+  @Post('dashboard/delete-account')
+  @UseGuards(AuthGuard('jwt'))
+  deleteSelf(@Request() req: any) {
+    const currentId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
+    if (req.user?.type !== 'student') {
+      throw new ForbiddenException('This endpoint is for students only');
+    }
+    return this.studentsService.deleteSelf(currentId);
+  }
+
   // --- Document URL (signed) ---
   @Get(':id/documents/:docIndex/url')
   @UseGuards(AuthGuard('jwt'))

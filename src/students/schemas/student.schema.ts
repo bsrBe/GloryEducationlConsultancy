@@ -316,6 +316,15 @@ export class Student {
 
   @Prop()
   influencerSource: string;
+
+  @Prop()
+  passwordResetToken: string;
+
+  @Prop()
+  passwordResetExpires: Date;
+
+  @Prop({ default: true })
+  isActive: boolean;
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);

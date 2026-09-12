@@ -802,6 +802,16 @@ export class StudentsService {
     return { headers, rows, total: students.length };
   }
 
+  async deleteSelf(studentId: string) {
+    const student = await this.studentModel
+      .findByIdAndUpdate(studentId, { isActive: false }, { new: true })
+      .select('-password')
+      .lean();
+
+    if (!student) throw new NotFoundException('Student not found');
+    return { message: 'Account deactivated successfully' };
+  }
+
   async exportStudentsCSV(query?: { search?: string }): Promise<string> {
     const { headers, rows } = await this.exportStudents(query);
     const escapeCsv = (val: any) => {

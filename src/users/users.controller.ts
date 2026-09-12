@@ -44,6 +44,14 @@ export class UsersController {
     return this.usersService.updateSelf(userId, dto);
   }
 
+  // --- Self-service account deletion (any authenticated user) ---
+  @Delete('me')
+  @Roles(UserRole.ADMIN, UserRole.GLORY_STAFF, UserRole.UNIVERSITY_REP)
+  deleteSelf(@Request() req: any) {
+    const userId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
+    return this.usersService.remove(userId);
+  }
+
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.usersService.findById(id);

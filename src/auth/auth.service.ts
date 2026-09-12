@@ -192,82 +192,132 @@ export class AuthService {
     return { message: 'Password changed successfully' };
   }
 
-  async resetPassword(email: string) {
-    const student = await this.studentModel.findOne({
-      email: email.toLowerCase(),
-    });
-    const user = await this.userModel.findOne({ email: email.toLowerCase() });
+  async requestPasswordReset(email: string) {
+    const normalizedEmail = email.toLowerCase();
+    
+    // Generate reset token
+    const resetToken = Math.random().toString(36).substring(2, 15) + 
+                      Math.random().toString(36).substring(2, 15);
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Try to find user first
+    let user = await this.userModel.findOne({ email: normalizedEmail });
+    let isStudent = false;
+    
+    if (!user) {
+      // Try to find student
+      user = await this.studentModel.findOne({ email: normalizedEmail });
+      isStudent = true;
+    }
 
     // Always return success to prevent email enumeration
-    if (!student && !user) {
+    if (!user) {
       return {
-        message:
-          'If an account exists with this email, a reset link has been sent.',
+        message: 'If an account exists with this email, a reset link has been sent.',
       };
     }
 
-    // Generate a temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 12);
-
-    if (student) {
-      student.password = hashedPassword;
-      await student.save();
-
-      // Send reset email
-      this.emailService
-        .sendCustomEmail(
-          [
-            {
-              email: student.email,
-              name: `${student.firstName} ${student.lastName}`,
-            },
-          ],
-          'Password Reset - Glory Admissions Fair',
-          `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Password Reset</h2>
-          <p>Dear ${student.firstName},</p>
-          <p>Your password has been reset. Here are your new credentials:</p>
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Email:</strong> ${student.email}</p>
-            <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-          </div>
-          <p>Please log in and change your password immediately.</p>
-          <p>If you did not request this reset, please contact support.</p>
-          <p>Best regards,<br>Glory Educational Consultancy</p>
-        </div>`,
-        )
-        .catch(() => {});
+    // Update reset token
+    if (isStudent) {
+      await this.studentModel.findByIdAndUpdate(user._id, {
+        passwordResetToken: resetToken,
+        passwordResetExpires: resetExpires,
+      });
+    } else {
+      await this.userModel.findByIdAndUpdate(user._id, {
+        passwordResetToken: resetToken,
+        passwordResetExpires: resetExpires,
+      });
     }
 
-    if (user) {
-      user.password = hashedPassword;
-      await user.save();
-
-      this.emailService
-        .sendCustomEmail(
-          [{ email: user.email, name: `${user.firstName} ${user.lastName}` }],
-          'Password Reset - Glory Admissions Fair',
-          `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Password Reset</h2>
-          <p>Dear ${user.firstName},</p>
-          <p>Your password has been reset. Here are your new credentials:</p>
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-          </div>
-          <p>Please log in and change your password immediately.</p>
-          <p>If you did not request this reset, please contact support.</p>
-          <p>Best regards,<br>Glory Educational Consultancy</p>
-        </div>`,
-        )
-        .catch(() => {});
-    }
+    // Send reset email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    
+    this.emailService
+      .sendTemplateEmail(
+        'password_reset_request',
+        {
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+        },
+        {
+          firstName: user.firstName,
+          email: user.email,
+          resetUrl,
+        },
+      )
+      .catch((err) => {
+        console.error('Failed to send password reset email:', err);
+      });
 
     return {
-      message:
-        'If an account exists with this email, a reset link has been sent.',
+      message: 'If an account exists with this email, a reset link has been sent.',
     };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    if (!token || !newPassword) {
+      throw new BadRequestException('Token and new password are required');
+    }
+
+    // Try to find user with valid reset token
+    let user = await this.userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() },
+    });
+    
+    let isStudent = false;
+    
+    if (!user) {
+      // Try students
+      user = await this.studentModel.findOne({
+        passwordResetToken: token,
+        passwordResetExpires: { $gt: new Date() },
+      });
+      isStudent = true;
+    }
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password and clear reset token
+    if (isStudent) {
+      await this.studentModel.findByIdAndUpdate(user._id, {
+        password: hashedPassword,
+        passwordResetToken: undefined,
+        passwordResetExpires: undefined,
+      });
+    } else {
+      await this.userModel.findByIdAndUpdate(user._id, {
+        password: hashedPassword,
+        passwordResetToken: undefined,
+        passwordResetExpires: undefined,
+      });
+    }
+
+    // Send confirmation email
+    this.emailService
+      .sendTemplateEmail(
+        'password_reset_confirmation',
+        {
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+        },
+        {
+          firstName: user.firstName,
+          email: user.email,
+          loginUrl: process.env.FRONTEND_URL + '/login' || 'http://localhost:3000/login',
+        },
+      )
+      .catch((err) => {
+        console.error('Failed to send password reset confirmation email:', err);
+      });
+
+    return { message: 'Password reset successful' };
   }
 
   private generateToken(payload: {

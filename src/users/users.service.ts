@@ -9,10 +9,14 @@ import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto, UpdateSelfDto } from './dto/update-user.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private emailService: EmailService,
+  ) {}
 
   async create(dto: CreateUserDto) {
     const existing = await this.userModel.findOne({
@@ -29,6 +33,28 @@ export class UsersService {
 
     const saved = await user.save();
     const { password, ...result } = saved.toObject();
+
+    // Send welcome email
+    this.emailService
+      .sendTemplateEmail(
+        'user_account_created',
+        {
+          email: result.email,
+          name: `${result.firstName} ${result.lastName}`,
+        },
+        {
+          firstName: result.firstName,
+          lastName: result.lastName,
+          email: result.email,
+          role: result.role,
+          loginUrl: process.env.FRONTEND_URL + '/login' || 'https://admin.gloryedu.et/login',
+        },
+      )
+      .catch((err) => {
+        console.error('Failed to send welcome email:', err);
+        // Don't throw error, user creation should succeed even if email fails
+      });
+
     return result;
   }
 
