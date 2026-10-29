@@ -278,6 +278,9 @@ export class Student {
   @Prop()
   intake: string;
 
+  @Prop()
+  passportAvailable: boolean;
+
   @Prop({ default: 0 })
   profileComplete: number;
 

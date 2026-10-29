@@ -90,7 +90,7 @@ export class StudentsService {
     return this.calculateProfileCompletion(student._id.toString());
   }
 
-  private async calculateProfileCompletion(id: string) {
+  async calculateProfileCompletion(id: string) {
     const student = await this.studentModel.findById(id).lean();
     if (!student) throw new NotFoundException('Student not found');
 

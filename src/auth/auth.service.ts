@@ -43,9 +43,23 @@ export class AuthService {
       email: dto.email.toLowerCase(),
       password: hashedPassword,
       studentId,
+      // Initialise sub-documents so schema defaults apply (e.g. stage: 'Interested')
+      // and new registrants show up in admin pipeline/stage filters immediately.
+      application: {},
     });
 
-    await student.save();
+    try {
+      await student.save();
+    } catch (err: any) {
+      // Concurrent duplicate submit slips past the findOne check above
+      if (err?.code === 11000) {
+        throw new ConflictException('Email already registered');
+      }
+      throw err;
+    }
+    await this.studentsService.calculateProfileCompletion(
+      student._id.toString(),
+    );
 
     const token = this.generateToken({
       sub: student._id.toString(),
