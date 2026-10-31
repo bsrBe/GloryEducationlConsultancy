@@ -18,6 +18,9 @@ import { PublishResultDto } from './dto/result.dto';
 import { EmailService } from '../email/email.service';
 import { CountersService } from '../counters/counters.service';
 
+// Sensitive fields that university representatives don't need.
+const PERSONAL_DETAIL_FIELDS = '-dateOfBirth -gender';
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -63,10 +66,10 @@ export class StudentsService {
     };
   }
 
-  async findById(id: string) {
+  async findById(id: string, omitPersonalDetails = false) {
     const student = await this.studentModel
       .findById(id)
-      .select('-password')
+      .select(omitPersonalDetails ? `-password ${PERSONAL_DETAIL_FIELDS}` : '-password')
       .lean();
     if (!student) throw new NotFoundException('Student not found');
     return student;
@@ -465,7 +468,7 @@ export class StudentsService {
           { 'matches.status': 'approved' },
         ],
       })
-      .select('-password')
+      .select(`-password ${PERSONAL_DETAIL_FIELDS}`)
       .lean();
   }
 

@@ -61,7 +61,10 @@ export class StudentsController {
     if (req.user?.type === 'student' && currentId !== id) {
       throw new ForbiddenException('Access denied');
     }
-    return this.studentsService.findById(id);
+    return this.studentsService.findById(
+      id,
+      req.user?.role === UserRole.UNIVERSITY_REP,
+    );
   }
 
   // --- Update profile (Student or Staff) ---
