@@ -23,7 +23,7 @@ import {
   CreateAssessmentDto,
   OverrideAssessmentDto,
 } from './dto/assessment.dto';
-import { ApproveMatchDto } from './dto/match.dto';
+import { ApproveMatchDto, OverrideMatchDto } from './dto/match.dto';
 import { CreateReviewDto } from './dto/review.dto';
 import { PublishResultDto } from './dto/result.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -38,6 +38,23 @@ export class StudentsController {
     private studentsService: StudentsService,
     private cloudinaryService: CloudinaryService,
   ) {}
+
+  // Students reach only their own record. Reps reach only students approved for
+  // their university, and only on routes that allow reps. Staff reach everyone.
+  private async assertAccess(
+    req: any,
+    id: string,
+    { repAllowed = true }: { repAllowed?: boolean } = {},
+  ) {
+    const user = req.user;
+    if (user?.type === 'student') {
+      if (user._id?.toString() !== id)
+        throw new ForbiddenException('Access denied');
+    } else if (user?.role === UserRole.UNIVERSITY_REP) {
+      if (!repAllowed) throw new ForbiddenException('Access denied');
+      await this.studentsService.assertRepCanAccess(id, user.university);
+    }
+  }
 
   // --- List all students (Staff only) ---
   @Get()
@@ -56,11 +73,8 @@ export class StudentsController {
 
   // --- Get student by MongoDB ID ---
   @Get(':id')
-  findById(@Param('id') id: string, @Request() req: any) {
-    const currentId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
-    if (req.user?.type === 'student' && currentId !== id) {
-      throw new ForbiddenException('Access denied');
-    }
+  async findById(@Param('id') id: string, @Request() req: any) {
+    await this.assertAccess(req, id);
     return this.studentsService.findById(
       id,
       req.user?.role === UserRole.UNIVERSITY_REP,
@@ -69,25 +83,23 @@ export class StudentsController {
 
   // --- Update profile (Student or Staff) ---
   @Patch(':id/profile')
-  updateProfile(
+  async updateProfile(
     @Param('id') id: string,
     @Body() dto: UpdateProfileDto,
     @Request() req: any,
   ) {
-    const currentId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
-    if (req.user?.type === 'student' && currentId !== id) {
-      throw new ForbiddenException('Access denied');
-    }
+    await this.assertAccess(req, id, { repAllowed: false });
     return this.studentsService.updateProfile(id, dto);
   }
 
   // --- Add payment (Student) ---
   @Post(':id/payments')
-  addPayment(
+  async addPayment(
     @Param('id') id: string,
     @Body() dto: CreatePaymentDto,
     @Request() req: any,
   ) {
+    await this.assertAccess(req, id, { repAllowed: false });
     return this.studentsService.addPayment(id, dto);
   }
 
@@ -114,7 +126,9 @@ export class StudentsController {
   async uploadDocument(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
   ) {
+    await this.assertAccess(req, id, { repAllowed: false });
     const result = await this.cloudinaryService.uploadFile(file);
     return this.studentsService.addDocument(id, file, result.url);
   }
@@ -122,11 +136,13 @@ export class StudentsController {
   // --- Review document (Staff) ---
   @Patch(':id/documents/:docIndex/review')
   @Roles(UserRole.ADMIN, UserRole.GLORY_STAFF, UserRole.UNIVERSITY_REP)
-  reviewDocument(
+  async reviewDocument(
     @Param('id') id: string,
     @Param('docIndex') docIndex: string,
     @Body('status') status: string,
+    @Request() req: any,
   ) {
+    await this.assertAccess(req, id);
     return this.studentsService.reviewDocument(id, parseInt(docIndex), status);
   }
 
@@ -166,14 +182,26 @@ export class StudentsController {
     return this.studentsService.approveMatch(id, dto);
   }
 
+  // --- Manually override match (Staff) ---
+  @Patch(':id/match/override')
+  @Roles(UserRole.ADMIN, UserRole.GLORY_STAFF)
+  overrideMatch(
+    @Param('id') id: string,
+    @Body() dto: OverrideMatchDto,
+    @Request() req: any,
+  ) {
+    return this.studentsService.overrideMatch(id, dto, req.user._id);
+  }
+
   // --- Submit representative review (Rep) ---
   @Post(':id/review')
   @Roles(UserRole.UNIVERSITY_REP)
-  submitReview(
+  async submitReview(
     @Param('id') id: string,
     @Body() dto: CreateReviewDto,
     @Request() req: any,
   ) {
+    await this.assertAccess(req, id);
     return this.studentsService.submitReview(id, req.user._id, dto);
   }
 
@@ -186,11 +214,8 @@ export class StudentsController {
 
   // --- Get student result (Student) ---
   @Get(':id/result')
-  getStudentResult(@Param('id') id: string, @Request() req: any) {
-    const currentId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
-    if (req.user?.type === 'student' && currentId !== id) {
-      throw new ForbiddenException('Access denied');
-    }
+  async getStudentResult(@Param('id') id: string, @Request() req: any) {
+    await this.assertAccess(req, id);
     return this.studentsService.getStudentResult(id);
   }
 
@@ -209,7 +234,7 @@ export class StudentsController {
   @Get('representative/assigned')
   @Roles(UserRole.UNIVERSITY_REP)
   getAssignedStudents(@Request() req: any) {
-    return this.studentsService.getAssignedStudents(req.user._id);
+    return this.studentsService.getAssignedStudents(req.user.university);
   }
 
   // --- Student Dashboard (aggregated view) ---
@@ -223,26 +248,20 @@ export class StudentsController {
   // --- Document URL (signed) ---
   @Get(':id/documents/:docIndex/url')
   @UseGuards(AuthGuard('jwt'))
-  getDocumentUrl(
+  async getDocumentUrl(
     @Param('id') id: string,
     @Param('docIndex') docIndex: string,
     @Request() req: any,
   ) {
-    const currentId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
-    if (req.user?.type === 'student' && currentId !== id) {
-      throw new ForbiddenException('Access denied');
-    }
+    await this.assertAccess(req, id);
     return this.studentsService.getDocumentUrl(id, parseInt(docIndex));
   }
 
   // --- Payment History ---
   @Get(':id/payments/history')
   @UseGuards(AuthGuard('jwt'))
-  getPaymentHistory(@Param('id') id: string, @Request() req: any) {
-    const currentId = req.user?._id ? req.user._id.toString() : req.user?.id?.toString();
-    if (req.user?.type === 'student' && currentId !== id) {
-      throw new ForbiddenException('Access denied');
-    }
+  async getPaymentHistory(@Param('id') id: string, @Request() req: any) {
+    await this.assertAccess(req, id, { repAllowed: false });
     return this.studentsService.getPaymentHistory(id);
   }
 

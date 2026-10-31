@@ -111,6 +111,18 @@ export class Matches {
 
   @Prop({ enum: ['suggested', 'approved', 'rejected'], default: 'suggested' })
   status: string;
+
+  @Prop({ default: false })
+  overridden: boolean;
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  overriddenBy: Types.ObjectId;
+
+  @Prop()
+  overriddenAt: Date;
+
+  @Prop()
+  overrideReason: string;
 }
 
 @Schema({ _id: false })
