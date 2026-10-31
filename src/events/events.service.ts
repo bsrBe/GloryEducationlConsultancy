@@ -303,12 +303,12 @@ export class EventsService {
     const isStaff =
       user.role === 'admin' ||
       user.role === 'glory_staff' ||
-      user.role === 'representative';
+      user.role === 'university_rep';
 
     let studentProfile: StudentDoc | null = null;
 
-    // 1. Payment Verification Gate for Students
-    // TEMPORARILY DISABLED FOR TESTING — re-enable before production!
+    // 1. Student profile check. [Payment disabled] Registration is free, so the
+    // verified payment gate below stays off.
     if (!isStaff) {
       studentProfile = await this.studentModel.findById(user._id);
       if (!studentProfile) {

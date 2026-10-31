@@ -43,7 +43,7 @@ export class EmailService {
       'noreply@gloryedu.com';
     const senderName =
       this.configService.get<string>('BREVO_SENDER_NAME') ||
-      'Glory Educational Consultancy';
+      'Veridan Education';
 
     try {
       const request: EmailRequest = {
@@ -79,7 +79,7 @@ export class EmailService {
       'noreply@gloryedu.com';
     const senderName =
       this.configService.get<string>('BREVO_SENDER_NAME') ||
-      'Glory Educational Consultancy';
+      'Veridan Education';
 
     try {
       const request: EmailRequest = {

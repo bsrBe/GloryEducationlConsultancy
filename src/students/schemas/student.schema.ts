@@ -120,6 +120,18 @@ export class Matches {
 
   @Prop({ enum: ['suggested', 'approved', 'rejected'], default: 'suggested' })
   status: string;
+
+  @Prop({ default: false })
+  overridden: boolean;
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  overriddenBy: Types.ObjectId;
+
+  @Prop()
+  overriddenAt: Date;
+
+  @Prop()
+  overrideReason: string;
 }
 
 @Schema({ _id: false })
@@ -267,6 +279,9 @@ export class Student {
   city: string;
 
   @Prop()
+  country: string;
+
+  @Prop()
   institution: string;
 
   @Prop()
@@ -286,6 +301,9 @@ export class Student {
 
   @Prop()
   intake: string;
+
+  @Prop()
+  passportAvailable: boolean;
 
   @Prop({ default: 0 })
   profileComplete: number;

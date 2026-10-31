@@ -502,11 +502,11 @@ async function seed() {
   }
 
   // --- 7. Event ---
-  const eventExists = await eventModel.findOne({ name: 'Glory Fair 2026' });
+  const eventExists = await eventModel.findOne({ name: 'Veridan Webinar 2026' });
   if (!eventExists) {
     await eventModel.create({
-      name: 'Glory Fair 2026',
-      description: 'Glory International Admissions Fair - Main Event',
+      name: 'Veridan Webinar 2026',
+      description: 'Veridan Education webinar',
       date: new Date('2026-09-15'),
       startTime: '14:00',
       endTime: '17:00',
@@ -547,7 +547,7 @@ async function seed() {
         },
       ],
     });
-    console.log('✅ Event created: Glory Fair 2026');
+    console.log('✅ Event created: Veridan Webinar 2026');
   } else {
     console.log('ℹ️  Event already exists');
   }
