@@ -48,7 +48,7 @@ export class MessagesService {
       content: m.body,
       read: m.isRead,
       createdAt: m.sentAt || m.createdAt,
-      senderName: m.sender ? `${m.sender.firstName || ''} ${m.sender.lastName || ''}`.trim() : 'Glory Staff',
+      senderName: m.sender ? `${m.sender.firstName || ''} ${m.sender.lastName || ''}`.trim() : 'Veridan Staff',
       recipientName: m.recipient ? `${m.recipient.firstName || ''} ${m.recipient.lastName || ''}`.trim() : 'Student',
     }));
   }
@@ -80,7 +80,7 @@ export class MessagesService {
       content: message.body,
       read: message.isRead,
       createdAt: message.sentAt || message.createdAt,
-      senderName: message.sender ? `${message.sender.firstName || ''} ${message.sender.lastName || ''}`.trim() : 'Glory Staff',
+      senderName: message.sender ? `${message.sender.firstName || ''} ${message.sender.lastName || ''}`.trim() : 'Veridan Staff',
       recipientName: message.recipient ? `${message.recipient.firstName || ''} ${message.recipient.lastName || ''}`.trim() : 'Student',
     };
   }

@@ -5,12 +5,12 @@ export interface EmailTemplate {
 
 export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
   registration_confirmation: {
-    subject: 'Welcome to Glory International Admissions Fair',
+    subject: 'Welcome to Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Welcome to Glory International Admissions Fair!</h2>
+        <h2 style="color: #002b5f;">Welcome to Veridan Education!</h2>
         <p>Dear ${data.firstName},</p>
-        <p>Thank you for registering for the Glory International Admissions Fair. Your registration has been successfully received.</p>
+        <p>Thank you for registering with Veridan Education. Your registration has been successfully received.</p>
         <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Your Student ID:</strong> ${data.studentId}</p>
           <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
@@ -18,22 +18,22 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         <p><strong>Next Steps:</strong></p>
         <ol>
-          <li>Complete your payment of 500 ETB via Telebirr, bank transfer, or cash</li>
-          <li>Once payment is verified, complete your detailed Admissions Profile</li>
+          <!-- [Payment disabled] was: Complete your payment of 500 ETB via Telebirr, bank transfer, or cash / Once payment is verified, complete your detailed Admissions Profile -->
+          <li>Complete your detailed Admissions Profile</li>
           <li>Upload your academic documents (combined PDF)</li>
         </ol>
         <p>Your Student ID is your permanent reference number. Please keep it safe.</p>
         <p>If you have any questions, please don't hesitate to contact us.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
 
   payment_received: {
-    subject: 'Payment Received - Glory Admissions Fair',
+    subject: 'Payment Received - Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Payment Received</h2>
+        <h2 style="color: #002b5f;">Payment Received</h2>
         <p>Dear ${data.firstName},</p>
         <p>We have received your payment. Here are the details:</p>
         <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -44,7 +44,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <p><strong>Status:</strong> Pending Verification</p>
         </div>
         <p>Your payment will be verified by our team shortly. Once verified, you'll receive a confirmation and can proceed to complete your Admissions Profile.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
@@ -53,7 +53,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
     subject: 'Payment Verified - Complete Your Profile',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Payment Verified!</h2>
+        <h2 style="color: #002b5f;">Payment Verified!</h2>
         <p>Dear ${data.firstName},</p>
         <p>Great news! Your payment has been verified successfully.</p>
         <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -67,16 +67,16 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Wait for your assessment and university matching</li>
         </ol>
         <p>Your Admissions Profile is now unlocked. Please complete it as soon as possible to ensure timely assessment.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
 
   profile_reminder: {
-    subject: 'Complete Your Profile - Glory Admissions Fair',
+    subject: 'Complete Your Profile - Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Complete Your Admissions Profile</h2>
+        <h2 style="color: #002b5f;">Complete Your Admissions Profile</h2>
         <p>Dear ${data.firstName},</p>
         <p>We noticed your Admissions Profile is only ${data.profileComplete}% complete.</p>
         <p>To ensure you receive the best possible university matching, please complete your profile including:</p>
@@ -87,16 +87,16 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Preferred destination and program</li>
         </ul>
         <p>Students with complete profiles receive more accurate matching results.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
 
   document_reminder: {
-    subject: 'Upload Your Documents - Glory Admissions Fair',
+    subject: 'Upload Your Documents - Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Upload Your Academic Documents</h2>
+        <h2 style="color: #002b5f;">Upload Your Academic Documents</h2>
         <p>Dear ${data.firstName},</p>
         <p>Please upload your academic documents as a single combined PDF.</p>
         <p><strong>Suggested order:</strong></p>
@@ -110,7 +110,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>CV</li>
         </ol>
         <p>Use filename format: ${data.studentId}_AcademicProfile.pdf</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
@@ -119,7 +119,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
     subject: 'Your Assessment Results Are Ready',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Assessment Complete</h2>
+        <h2 style="color: #002b5f;">Assessment Complete</h2>
         <p>Dear ${data.firstName},</p>
         <p>Your admissions assessment has been completed. Please log in to your dashboard to view your results and university matches.</p>
         <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -127,7 +127,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <p><strong>Status:</strong> Assessment Complete</p>
         </div>
         <p>Your results include your primary and secondary university matches, along with the next steps for your application.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
@@ -147,7 +147,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         <p>We recommend starting your application process as soon as possible. You will be invited to our Application Clinic for personalized guidance.</p>
         <p><strong>Disclaimer:</strong> This is a preliminary eligibility assessment. Final admission depends on the institution's official application and verification process.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
@@ -167,7 +167,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         <p>This may mean additional documents are needed or clarification on certain requirements. Please check your dashboard for specific details.</p>
         <p><strong>Disclaimer:</strong> This is a preliminary eligibility assessment. Final admission depends on the institution's official application and verification process.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
@@ -192,16 +192,16 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Complete your Application Clinic consultation for personalized guidance</li>
         </ul>
         <p><strong>Disclaimer:</strong> This is a preliminary eligibility assessment. Final admission depends on the institution's official application and verification process.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
 
   application_invitation: {
-    subject: 'Start Your Application - Glory Admissions Fair',
+    subject: 'Start Your Application - Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">You're Invited to Start Your Application!</h2>
+        <h2 style="color: #002b5f;">You're Invited to Start Your Application!</h2>
         <p>Dear ${data.firstName},</p>
         <p>Congratulations on receiving a positive assessment result! We'd like to invite you to start your application process.</p>
         <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -210,18 +210,18 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <p><strong>Result:</strong> ${data.resultStatus}</p>
         </div>
         <p>Our Application Clinic will provide personalized guidance through the application process. Please log in to your dashboard to get started.</p>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
 
   event_reminder: {
-    subject: 'Glory Admissions Fair - Event Reminder',
+    subject: 'Veridan Education webinar reminder',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Glory International Admissions Fair</h2>
+        <h2 style="color: #002b5f;">Your next webinar</h2>
         <p>Dear ${data.firstName},</p>
-        <p>This is a reminder that the Glory International Admissions Fair is coming up soon!</p>
+        <p>This is a reminder that your next Veridan Education webinar is coming up soon!</p>
         <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Student ID:</strong> ${data.studentId}</p>
           <p><strong>Event Date:</strong> ${data.eventDate || 'TBA'}</p>
@@ -233,18 +233,18 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Have a stable internet connection</li>
           <li>Prepare any questions for the Q&A session</li>
         </ul>
-        <p>Best regards,<br>Glory Educational Consultancy</p>
+        <p>Best regards,<br>Veridan Education</p>
       </div>
     `,
   },
 
   user_account_created: {
-    subject: 'Your Glory Staff Account Has Been Created',
+    subject: 'Your Veridan Staff Account Has Been Created',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Welcome to Glory Educational Consultancy</h2>
+        <h2 style="color: #002b5f;">Welcome to Veridan Education</h2>
         <p>Dear ${data.firstName} ${data.lastName},</p>
-        <p>Your staff account has been created successfully. You now have access to the Glory Admissions Management System.</p>
+        <p>Your staff account has been created successfully. You now have access to the Veridan Education Management System.</p>
         <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
           <p><strong>Account Details:</strong></p>
           <p><strong>Email:</strong> ${data.email}</p>
@@ -257,7 +257,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${data.loginUrl || 'https://admin.gloryedu.et/login'}" 
-             style="background-color: #2c5f2d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+             style="background-color: #002b5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
             Access Dashboard
           </a>
         </div>
@@ -269,25 +269,25 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Contact your supervisor if you have any questions</li>
         </ul>
         <p>If you have any questions or need assistance, please contact your system administrator.</p>
-        <p>Best regards,<br>Glory Educational Consultancy<br>System Administration</p>
+        <p>Best regards,<br>Veridan Education<br>System Administration</p>
       </div>
     `,
   },
 
   password_reset_request: {
-    subject: 'Password Reset Request - Glory Education',
+    subject: 'Password Reset Request - Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c5f2d;">Password Reset Request</h2>
+        <h2 style="color: #002b5f;">Password Reset Request</h2>
         <p>Dear ${data.firstName || 'User'},</p>
-        <p>We received a request to reset your password for your Glory Education account.</p>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2c5f2d;">
+        <p>We received a request to reset your password for your Veridan Education account.</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #002b5f;">
           <p><strong>Account:</strong> ${data.email}</p>
           <p><strong>Request Time:</strong> ${new Date().toLocaleString()}</p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${data.resetUrl}" 
-             style="background-color: #2c5f2d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+             style="background-color: #002b5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
             Reset Your Password
           </a>
         </div>
@@ -302,13 +302,13 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
         <p style="word-break: break-all; color: #007bff;">${data.resetUrl}</p>
         <p>If you didn't request a password reset, please ignore this email or contact our support team if you have concerns.</p>
-        <p>Best regards,<br>Glory Educational Consultancy<br>System Administration</p>
+        <p>Best regards,<br>Veridan Education<br>System Administration</p>
       </div>
     `,
   },
 
   password_reset_confirmation: {
-    subject: 'Password Successfully Reset - Glory Education',
+    subject: 'Password Successfully Reset - Veridan Education',
     html: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #28a745;">✅ Password Reset Successful</h2>
@@ -321,7 +321,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${data.loginUrl || 'https://admin.gloryedu.et/login'}" 
-             style="background-color: #2c5f2d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+             style="background-color: #002b5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
             Sign In Now
           </a>
         </div>
@@ -336,7 +336,7 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Log out from all devices if you suspect unauthorized access</li>
         </ul>
         <p>If you have any concerns about your account security, please contact us immediately.</p>
-        <p>Best regards,<br>Glory Educational Consultancy<br>System Administration</p>
+        <p>Best regards,<br>Veridan Education<br>System Administration</p>
       </div>
     `,
   },

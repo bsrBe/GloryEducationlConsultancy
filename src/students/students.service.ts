@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  ForbiddenException,
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
@@ -13,12 +14,19 @@ import {
   CreateAssessmentDto,
   OverrideAssessmentDto,
 } from './dto/assessment.dto';
-import { ApproveMatchDto } from './dto/match.dto';
+import {
+  ApproveMatchDto,
+  MatchChoiceDto,
+  OverrideMatchDto,
+} from './dto/match.dto';
 import { CreateReviewDto } from './dto/review.dto';
 import { PublishResultDto } from './dto/result.dto';
 import { EmailService } from '../email/email.service';
 import { CountersService } from '../counters/counters.service';
 import { PaymentVerificationService } from './payment-verification.service';
+
+// Sensitive fields that university representatives don't need.
+const PERSONAL_DETAIL_FIELDS = '-dateOfBirth -gender';
 
 @Injectable()
 export class StudentsService {
@@ -66,10 +74,14 @@ export class StudentsService {
     };
   }
 
-  async findById(id: string) {
+  async findById(id: string, omitPersonalDetails = false) {
     const student = await this.studentModel
       .findById(id)
-      .select('-password')
+      .select(
+        omitPersonalDetails
+          ? `-password ${PERSONAL_DETAIL_FIELDS}`
+          : '-password',
+      )
       .lean();
     if (!student) throw new NotFoundException('Student not found');
     return student;
@@ -93,7 +105,7 @@ export class StudentsService {
     return this.calculateProfileCompletion(student._id.toString());
   }
 
-  private async calculateProfileCompletion(id: string) {
+  async calculateProfileCompletion(id: string) {
     const student = await this.studentModel.findById(id).lean();
     if (!student) throw new NotFoundException('Student not found');
 
@@ -232,7 +244,7 @@ export class StudentsService {
         .catch(() => {});
 
       return {
-        message: 'Payment verified successfully! Your Admissions Fair Pass is active.',
+        message: 'Payment verified successfully! Your pass is active.',
         verified: true,
         payments: student.payments,
       };
@@ -454,7 +466,7 @@ export class StudentsService {
   async approveMatch(studentId: string, dto: ApproveMatchDto) {
     const student = await this.studentModel.findById(studentId);
     if (!student) throw new NotFoundException('Student not found');
-    if (!student.matches)
+    if (!student.matches?.primary?.university)
       throw new BadRequestException('No matches to approve');
     if (dto.primaryUniversityId)
       student.matches.primary.university = new Types.ObjectId(
@@ -462,15 +474,72 @@ export class StudentsService {
       );
     if (dto.primaryProgram)
       student.matches.primary.program = dto.primaryProgram;
-    if (dto.secondaryUniversityId)
-      student.matches.secondary.university = new Types.ObjectId(
-        dto.secondaryUniversityId,
-      );
-    if (dto.secondaryProgram)
-      student.matches.secondary.program = dto.secondaryProgram;
+    if (student.matches.secondary) {
+      if (dto.secondaryUniversityId)
+        student.matches.secondary.university = new Types.ObjectId(
+          dto.secondaryUniversityId,
+        );
+      if (dto.secondaryProgram)
+        student.matches.secondary.program = dto.secondaryProgram;
+    }
     student.matches.status = dto.status || 'approved';
     await student.save();
-    return { message: `Match ${dto.status}`, matches: student.matches };
+    return {
+      message: `Match ${student.matches.status}`,
+      matches: student.matches,
+    };
+  }
+
+  // Staff replace the suggested match by hand. Goes back to 'suggested' so a
+  // changed university is not visible to its rep until staff approve it.
+  async overrideMatch(
+    studentId: string,
+    dto: OverrideMatchDto,
+    overriddenBy: string,
+  ) {
+    const student = await this.studentModel.findById(studentId).lean();
+    if (!student) throw new NotFoundException('Student not found');
+    if (dto.primary.universityId === dto.secondary?.universityId)
+      throw new BadRequestException(
+        'Primary and secondary universities must be different',
+      );
+
+    const universityModel = this.studentModel.db.model('University');
+    const toEntry = async (choice: MatchChoiceDto) => {
+      const university = (await universityModel
+        .findOne({ _id: choice.universityId, isActive: true })
+        .lean()) as any;
+      if (!university)
+        throw new BadRequestException('University not found or inactive');
+      const programs: { name: string }[] = university.programs || [];
+      if (
+        programs.length > 0 &&
+        !programs.some((p) => p.name === choice.program)
+      )
+        throw new BadRequestException(
+          `${university.name} does not offer that program`,
+        );
+      return {
+        university: university._id,
+        program: choice.program,
+        reason: `Chosen by staff: ${dto.reason.trim()}`,
+      };
+    };
+
+    const matches = {
+      primary: await toEntry(dto.primary),
+      secondary: dto.secondary ? await toEntry(dto.secondary) : null,
+      matchedBy: new Types.ObjectId(overriddenBy),
+      matchedAt: new Date(),
+      status: 'suggested',
+      overridden: true,
+      overriddenBy: new Types.ObjectId(overriddenBy),
+      overriddenAt: new Date(),
+      overrideReason: dto.reason.trim(),
+    };
+
+    await this.studentModel.findByIdAndUpdate(studentId, { matches });
+    return { message: 'Match updated', matches };
   }
 
   async submitReview(studentId: string, repId: string, dto: CreateReviewDto) {
@@ -566,17 +635,35 @@ export class StudentsService {
     return student;
   }
 
-  async getAssignedStudents(repId: string) {
+  // A rep sees a student once staff approve a match to the rep's university.
+  private repStudentsFilter(universityId?: string) {
+    if (!universityId || !Types.ObjectId.isValid(universityId)) return null;
+    const university = new Types.ObjectId(universityId);
+    return {
+      'matches.status': 'approved',
+      $or: [
+        { 'matches.primary.university': university },
+        { 'matches.secondary.university': university },
+      ],
+    };
+  }
+
+  async getAssignedStudents(universityId?: string) {
+    const filter = this.repStudentsFilter(universityId);
+    if (!filter) return [];
     return this.studentModel
-      .find({
-        'matches.primary.university': { $exists: true },
-        $or: [
-          { 'representativeReview.universityRep': new Types.ObjectId(repId) },
-          { 'matches.status': 'approved' },
-        ],
-      })
-      .select('-password')
+      .find(filter)
+      .select(`-password ${PERSONAL_DETAIL_FIELDS}`)
       .lean();
+  }
+
+  async assertRepCanAccess(studentId: string, universityId?: string) {
+    const filter = this.repStudentsFilter(universityId);
+    const allowed =
+      filter &&
+      Types.ObjectId.isValid(studentId) &&
+      (await this.studentModel.exists({ _id: studentId, ...filter }));
+    if (!allowed) throw new ForbiddenException('Access denied');
   }
 
   async updateApplicationStage(
@@ -642,7 +729,10 @@ export class StudentsService {
     // Get university names for matches
     let primaryMatchName = null;
     let secondaryMatchName = null;
-    if (student.matches?.primary?.university) {
+    // Students only see a match once staff approve it
+    const approvedMatches =
+      student.matches?.status === 'approved' ? student.matches : null;
+    if (approvedMatches?.primary?.university) {
       const universityModel = this.studentModel.db.model('University');
       const uni = (await universityModel
         .findById(student.matches.primary.university)
@@ -650,7 +740,7 @@ export class StudentsService {
         .catch(() => null)) as any;
       primaryMatchName = uni?.name || null;
     }
-    if (student.matches?.secondary?.university) {
+    if (approvedMatches?.secondary?.university) {
       const universityModel = this.studentModel.db.model('University');
       const uni = (await universityModel
         .findById(student.matches.secondary.university)

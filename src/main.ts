@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { AuditService } from './audit/audit.service';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
@@ -14,6 +14,10 @@ async function bootstrap() {
   app.getHttpAdapter().get('/health', (_req: unknown, res: { json: (body: unknown) => void }) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // How many reverse proxies sit in front of the API, so rate limits see the
+  // real client IP. Use 0 if the API is directly exposed to the internet.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 
   // Get audit service for interceptor
   const auditService = app.get(AuditService);
@@ -51,7 +55,7 @@ async function bootstrap() {
   const port = process.env.PORT ?? 5000;
   await app.listen(port, '0.0.0.0');
   console.log(
-    `🚀 Glory Admissions API running on port ${port}/api`,
+    `🚀 Veridan Education API running on port ${port}/api`,
   );
 }
 bootstrap();

@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsMongoId,
+  Matches,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class MatchDto {
   @IsString()
@@ -31,4 +39,28 @@ export class ApproveMatchDto {
   @IsOptional()
   @IsString()
   secondaryProgram?: string;
+}
+
+export class MatchChoiceDto {
+  @IsMongoId()
+  universityId: string;
+
+  @IsOptional()
+  @IsString()
+  program?: string;
+}
+
+export class OverrideMatchDto {
+  @ValidateNested()
+  @Type(() => MatchChoiceDto)
+  primary: MatchChoiceDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MatchChoiceDto)
+  secondary?: MatchChoiceDto;
+
+  @IsString()
+  @Matches(/\S/, { message: 'reason should not be empty' })
+  reason: string;
 }
