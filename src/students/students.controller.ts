@@ -254,7 +254,7 @@ export class StudentsController {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=glory-students-export-${new Date().toISOString().split('T')[0]}.csv`,
+      `attachment; filename=veridan-students-export-${new Date().toISOString().split('T')[0]}.csv`,
     );
     return res.send(csv);
   }

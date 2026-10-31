@@ -237,7 +237,7 @@ export class AuthService {
               name: `${student.firstName} ${student.lastName}`,
             },
           ],
-          'Password Reset - Glory Admissions Fair',
+          'Password Reset - Veridan Education',
           `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Password Reset</h2>
           <p>Dear ${student.firstName},</p>
@@ -248,7 +248,7 @@ export class AuthService {
           </div>
           <p>Please log in and change your password immediately.</p>
           <p>If you did not request this reset, please contact support.</p>
-          <p>Best regards,<br>Glory Educational Consultancy</p>
+          <p>Best regards,<br>Veridan Education</p>
         </div>`,
         )
         .catch(() => {});
@@ -261,7 +261,7 @@ export class AuthService {
       this.emailService
         .sendCustomEmail(
           [{ email: user.email, name: `${user.firstName} ${user.lastName}` }],
-          'Password Reset - Glory Admissions Fair',
+          'Password Reset - Veridan Education',
           `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Password Reset</h2>
           <p>Dear ${user.firstName},</p>
@@ -272,7 +272,7 @@ export class AuthService {
           </div>
           <p>Please log in and change your password immediately.</p>
           <p>If you did not request this reset, please contact support.</p>
-          <p>Best regards,<br>Glory Educational Consultancy</p>
+          <p>Best regards,<br>Veridan Education</p>
         </div>`,
         )
         .catch(() => {});
