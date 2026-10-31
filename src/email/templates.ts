@@ -18,8 +18,8 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         <p><strong>Next Steps:</strong></p>
         <ol>
-          <li>Complete your payment of 500 ETB via Telebirr, bank transfer, or cash</li>
-          <li>Once payment is verified, complete your detailed Admissions Profile</li>
+          <!-- [Payment disabled] was: Complete your payment of 500 ETB via Telebirr, bank transfer, or cash / Once payment is verified, complete your detailed Admissions Profile -->
+          <li>Complete your detailed Admissions Profile</li>
           <li>Upload your academic documents (combined PDF)</li>
         </ol>
         <p>Your Student ID is your permanent reference number. Please keep it safe.</p>
