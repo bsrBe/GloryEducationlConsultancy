@@ -258,6 +258,9 @@ export class Student {
   city: string;
 
   @Prop()
+  country: string;
+
+  @Prop()
   institution: string;
 
   @Prop()

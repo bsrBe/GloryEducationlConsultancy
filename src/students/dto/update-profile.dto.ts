@@ -30,6 +30,10 @@ export class UpdateProfileDto {
   city?: string;
 
   @IsOptional()
+  @IsString()
+  country?: string;
+
+  @IsOptional()
   @IsNumber()
   age?: number;
 
