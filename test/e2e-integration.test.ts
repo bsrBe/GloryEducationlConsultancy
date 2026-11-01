@@ -236,8 +236,7 @@ async function runE2ETests() {
         comments: 'Outstanding academic credentials. Direct admission track recommended.',
       },
     });
-    assert(repReviewRes.ok, 'RepReview', 'Rep Submits Official Green Decision', repReviewRes.data);
-    assert(repReviewRes.data?.review?.isLocked === true, 'RepReview', 'Representative Review Is Locked Upon Submission');
+    assert(repReviewRes.status === 403, 'RepReview', 'Reps Are Read-Only and Cannot Submit a Decision', repReviewRes.data);
 
     // ----------------------------------------------------
     // SUITE 7: RESULT PUBLICATION & STUDENT VIEW

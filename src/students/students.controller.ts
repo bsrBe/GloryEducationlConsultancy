@@ -135,7 +135,7 @@ export class StudentsController {
 
   // --- Review document (Staff) ---
   @Patch(':id/documents/:docIndex/review')
-  @Roles(UserRole.ADMIN, UserRole.GLORY_STAFF, UserRole.UNIVERSITY_REP)
+  @Roles(UserRole.ADMIN, UserRole.GLORY_STAFF)
   async reviewDocument(
     @Param('id') id: string,
     @Param('docIndex') docIndex: string,
@@ -194,8 +194,9 @@ export class StudentsController {
   }
 
   // --- Submit representative review (Rep) ---
+  // [G/Y/R disabled] Reps have read-only access, so they can't submit decisions
   @Post(':id/review')
-  @Roles(UserRole.UNIVERSITY_REP)
+  @Roles(UserRole.ADMIN)
   async submitReview(
     @Param('id') id: string,
     @Body() dto: CreateReviewDto,
