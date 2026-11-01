@@ -20,14 +20,14 @@ export class UniversitiesService {
     const filter = activeOnly ? { isActive: true } : {};
     return this.universityModel
       .find(filter)
-      .populate('representative', '-password')
+      .populate('representative', 'firstName lastName')
       .lean();
   }
 
   async findById(id: string) {
     const uni = await this.universityModel
       .findById(id)
-      .populate('representative', '-password')
+      .populate('representative', 'firstName lastName')
       .lean();
     if (!uni) throw new NotFoundException('University not found');
     return uni;
