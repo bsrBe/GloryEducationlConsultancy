@@ -24,6 +24,7 @@ const CREDENTIALS_PER_ACCOUNT = 10;
 const CREDENTIAL_PATHS = [
   '/api/auth/login',
   '/api/auth/forgot-password',
+  '/api/auth/verify-email',
   '/api/auth/reset-password',
 ];
 const SIGN_UP_PATHS = ['/api/auth/register', '/api/auth/google'];

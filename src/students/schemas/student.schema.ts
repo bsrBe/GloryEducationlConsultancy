@@ -336,7 +336,24 @@ export class Student {
   @Prop()
   influencerSource: string;
 
+  // Missing on older accounts, which count as unverified
+  @Prop({ default: false })
+  emailVerified: boolean;
+
+  // Sign-in sessions from before this time are no longer accepted
+  @Prop({ select: false })
+  sessionsValidAfter: Date;
+
   // Hidden from every query unless explicitly selected
+  @Prop({ select: false })
+  emailVerificationToken: string;
+
+  @Prop({ select: false })
+  emailVerificationExpires: Date;
+
+  @Prop({ select: false })
+  emailVerificationSentAt: Date;
+
   @Prop({ select: false })
   passwordResetToken: string;
 

@@ -4,6 +4,8 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  HttpStatus,
+  HttpException,
   ServiceUnavailableException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -73,6 +75,10 @@ export class AuthService {
       type: 'student',
     });
 
+    const verifyUrl = await this.studentsService.createEmailVerificationLink(
+      student._id.toString(),
+    );
+
     // Send registration confirmation email
     this.emailService
       .sendTemplateEmail(
@@ -86,6 +92,7 @@ export class AuthService {
           lastName: student.lastName,
           email: student.email,
           studentId: student.studentId,
+          verifyUrl,
         },
       )
       .catch(() => {});
@@ -197,6 +204,17 @@ export class AuthService {
     if (student.isActive === false)
       throw new UnauthorizedException('Account is deactivated');
 
+    // Google has just proven who owns this email. If it was never confirmed,
+    // whoever registered it may be someone else, so lock them out.
+    if (student.emailVerified !== true) {
+      await this.studentModel.findByIdAndUpdate(student._id, {
+        password: await this.randomPasswordHash(),
+        emailVerified: true,
+        sessionsValidAfter: this.nowForSessions(),
+        $unset: this.verificationFields,
+      });
+    }
+
     return {
       access_token: this.generateToken({
         sub: student._id.toString(),
@@ -247,12 +265,10 @@ export class AuthService {
   }
 
   private async createGoogleStudent(email: string, profile: TokenPayload) {
-    // Random password: this account signs in with Google, or sets a real
-    // password through forgot-password.
-    const password = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
     const student = new this.studentModel({
       email,
-      password,
+      password: await this.randomPasswordHash(),
+      emailVerified: true,
       firstName: profile.given_name || profile.name || 'Student',
       lastName: profile.family_name || '-',
       studentId: await this.studentsService.generateStudentId(),
@@ -417,9 +433,16 @@ export class AuthService {
 
     // Update password and clear reset token
     if (isStudent) {
+      // The reset link proved they own this email, and ends any other sessions
       await this.studentModel.findByIdAndUpdate(user._id, {
         password: hashedPassword,
-        $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
+        emailVerified: true,
+        sessionsValidAfter: this.nowForSessions(),
+        $unset: {
+          passwordResetToken: 1,
+          passwordResetExpires: 1,
+          ...this.verificationFields,
+        },
       });
     } else {
       await this.userModel.findByIdAndUpdate(user._id, {
@@ -447,6 +470,57 @@ export class AuthService {
       });
 
     return { message: 'Password reset successful' };
+  }
+
+  // Random password: the account signs in with Google, or sets a real password
+  // through forgot-password.
+  private randomPasswordHash() {
+    return bcrypt.hash(randomBytes(32).toString('hex'), 12);
+  }
+
+  // Tokens record their issue time in whole seconds, so round down to allow a
+  // new session straight away.
+  private nowForSessions() {
+    return new Date(Math.floor(Date.now() / 1000) * 1000);
+  }
+
+  private readonly verificationFields = {
+    emailVerificationToken: 1,
+    emailVerificationExpires: 1,
+  };
+
+  async verifyEmail(token: string) {
+    const student = await this.studentModel.findOneAndUpdate(
+      {
+        emailVerificationToken: this.hashToken(token),
+        emailVerificationExpires: { $gt: new Date() },
+      },
+      { emailVerified: true, $unset: this.verificationFields },
+    );
+    if (!student)
+      throw new BadRequestException(
+        'This link is invalid or has expired. Sign in to get a new one.',
+      );
+    return { message: 'Email confirmed' };
+  }
+
+  async resendVerification(studentId: string) {
+    const student = await this.studentModel
+      .findById(studentId)
+      .select('emailVerified +emailVerificationSentAt')
+      .lean();
+    if (!student) throw new NotFoundException('Student not found');
+    if (student.emailVerified === true)
+      return { message: 'Your email is already confirmed' };
+
+    const sentAt = student.emailVerificationSentAt?.getTime() ?? 0;
+    if (Date.now() - sentAt < 60 * 1000)
+      throw new HttpException(
+        'Please wait a minute before asking for another email.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    await this.studentsService.sendEmailVerification(studentId);
+    return { message: 'Confirmation email sent' };
   }
 
   private hashToken(token: string) {

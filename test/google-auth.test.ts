@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import { AllExceptionsFilter } from '../src/common/filters/http-exception.filter';
 import { AuthService } from '../src/auth/auth.service';
+import { EmailService } from '../src/email/email.service';
 import { RateLimiterGuard } from '../src/common/guards/rate-limiter.guard';
 
 async function run() {
@@ -23,6 +24,13 @@ async function run() {
     if (credential === 'forged.jwt.token') return realDecode(credential, audience);
     return JSON.parse(credential);
   };
+
+  if (process.env.KEEP_OPEN) {
+    const email = app.get(EmailService) as any;
+    email.sendTemplateEmail = async (_t: string, to: any, data: any) => {
+      if (data.verifyUrl) console.log(`VERIFY ${to.email} ${data.verifyUrl}`);
+    };
+  }
 
   const port = Number(process.env.KEEP_OPEN || 5056);
   await app.listen(port);
@@ -60,7 +68,7 @@ async function run() {
   const pw = `pw${Date.now()}@test.com`;
   const reg = await post('/auth/register', { email: pw, password: 'secret123', firstName: 'Pass', lastName: 'Word', phone: '1' });
   const linked = await google({ email: pw, email_verified: true, given_name: 'Pass' });
-  check(linked.body.user?._id === reg.body.student._id && (await post('/auth/login', { email: pw, password: 'secret123' })).status === 201, 'existing student can use Google and keeps their password');
+  check(linked.body.user?._id === reg.body.student._id && (await post('/auth/login', { email: pw, password: 'secret123' })).status === 401, 'unconfirmed account: Google reaches it and the earlier password stops working');
 
   const noName = await google({ email: `n${Date.now()}@test.com`, email_verified: true });
   check(noName.status === 201 && noName.body.user.lastName === '-', 'missing name from Google does not break sign-up');

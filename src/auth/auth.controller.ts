@@ -10,7 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterStudentDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { GoogleLoginDto } from './dto/google.dto';
+import { GoogleLoginDto, VerifyEmailDto } from './dto/google.dto';
 import { ChangePasswordDto, RequestPasswordResetDto, ResetPasswordDto } from './dto/password.dto';
 
 @Controller('auth')
@@ -47,6 +47,17 @@ export class AuthController {
       req.user.type,
       dto,
     );
+  }
+
+  @Post('verify-email')
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.token);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('resend-verification')
+  resendVerification(@Request() req: any) {
+    return this.authService.resendVerification(req.user._id.toString());
   }
 
   @Post('forgot-password')

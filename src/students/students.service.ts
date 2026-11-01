@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { createHash, randomBytes } from 'crypto';
 import { Model, Types } from 'mongoose';
 import { Student, StudentDoc } from './schemas/student.schema';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -97,12 +98,60 @@ export class StudentsService {
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
+    const current = await this.studentModel.findById(id).select('email').lean();
+    if (!current) throw new NotFoundException('Student not found');
+
+    // A new address hasn't been confirmed, whatever the old one's status was
+    const newEmail = dto.email?.trim().toLowerCase();
+    const changesEmail = !!newEmail && newEmail !== current.email;
+    const updates = changesEmail
+      ? { ...dto, email: newEmail, emailVerified: false }
+      : { ...dto, email: current.email };
+
+    let student;
+    try {
+      student = await this.studentModel
+        .findByIdAndUpdate(id, { $set: updates }, { new: true })
+        .select('-password');
+    } catch (err: any) {
+      if (err?.code === 11000)
+        throw new ConflictException('Email already registered');
+      throw err;
+    }
+    if (!student) throw new NotFoundException('Student not found');
+    if (changesEmail) await this.sendEmailVerification(id);
+    return this.calculateProfileCompletion(id);
+  }
+
+  // Replaces any earlier link. Returns the link so it can go in another email.
+  async createEmailVerificationLink(id: string) {
+    const token = randomBytes(32).toString('hex');
+    await this.studentModel.findByIdAndUpdate(id, {
+      emailVerificationToken: createHash('sha256').update(token).digest('hex'),
+      emailVerificationExpires: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      emailVerificationSentAt: new Date(),
+    });
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return `${frontend}/verify-email?token=${token}`;
+  }
+
+  async sendEmailVerification(id: string) {
     const student = await this.studentModel
-      .findByIdAndUpdate(id, { $set: dto }, { new: true })
-      .select('-password')
+      .findById(id)
+      .select('email firstName lastName')
       .lean();
     if (!student) throw new NotFoundException('Student not found');
-    return this.calculateProfileCompletion(student._id.toString());
+    const verifyUrl = await this.createEmailVerificationLink(id);
+    this.emailService
+      .sendTemplateEmail(
+        'email_verification',
+        {
+          email: student.email,
+          name: `${student.firstName} ${student.lastName}`,
+        },
+        { firstName: student.firstName, verifyUrl },
+      )
+      .catch(() => {});
   }
 
   async calculateProfileCompletion(id: string) {
@@ -724,7 +773,7 @@ export class StudentsService {
     const student = await this.studentModel
       .findById(studentId)
       .select(
-        'studentId firstName lastName email phone educationLevel school gpa graduationYear intendedProgram preferredCountry englishTest englishScore profileComplete payments documents assessment matches representativeReview result event application',
+        'emailVerified studentId firstName lastName email phone educationLevel school gpa graduationYear intendedProgram preferredCountry englishTest englishScore profileComplete payments documents assessment matches representativeReview result event application',
       )
       .lean();
     if (!student) throw new NotFoundException('Student not found');
@@ -768,6 +817,7 @@ export class StudentsService {
         englishScore: student.englishScore,
       },
       profileComplete: student.profileComplete,
+      emailVerified: student.emailVerified === true,
       paymentStatus: student.payments?.some((p) => p.status === 'Verified')
         ? 'Verified'
         : 'Pending',
