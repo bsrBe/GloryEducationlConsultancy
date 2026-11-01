@@ -31,7 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       const student = await this.studentModel
         .findById(payload.sub)
         .select('-password');
-      if (!student) throw new UnauthorizedException();
+      if (!student || student.isActive === false)
+        throw new UnauthorizedException();
       return { ...student.toObject(), role: 'student', type: 'student' };
     }
 

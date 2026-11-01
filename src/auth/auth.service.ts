@@ -4,15 +4,20 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
+import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import { User, UserRole } from '../users/schemas/user.schema';
 import { Student } from '../students/schemas/student.schema';
 import { RegisterStudentDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google.dto';
 import { ChangePasswordDto } from './dto/password.dto';
 import { StudentsService } from '../students/students.service';
 import { EmailService } from '../email/email.service';
@@ -117,6 +122,8 @@ export class AuthService {
     if (student) {
       const isMatch = await bcrypt.compare(dto.password, student.password);
       if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+      if (student.isActive === false)
+        throw new UnauthorizedException('Account is deactivated');
 
       const token = this.generateToken({
         sub: student._id.toString(),
@@ -171,6 +178,114 @@ export class AuthService {
         type: 'user',
       },
     };
+  }
+
+  // Students only: staff keep signing in with email and password.
+  async googleLogin(dto: GoogleLoginDto) {
+    const profile = await this.verifyGoogleCredential(dto.credential);
+    const email = profile.email!.toLowerCase();
+
+    let student = await this.studentModel.findOne({ email });
+    const isNewUser = !student;
+    if (!student) {
+      if (await this.userModel.exists({ email }))
+        throw new ForbiddenException(
+          'Staff accounts sign in with email and password.',
+        );
+      student = await this.createGoogleStudent(email, profile);
+    }
+    if (student.isActive === false)
+      throw new UnauthorizedException('Account is deactivated');
+
+    return {
+      access_token: this.generateToken({
+        sub: student._id.toString(),
+        email: student.email,
+        role: 'student',
+        type: 'student',
+      }),
+      isNewUser,
+      user: {
+        id: student._id,
+        _id: student._id,
+        studentId: student.studentId,
+        email: student.email,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        role: 'student',
+        type: 'student',
+      },
+    };
+  }
+
+  private async verifyGoogleCredential(
+    credential: string,
+  ): Promise<TokenPayload> {
+    const audience = process.env.GOOGLE_CLIENT_ID;
+    if (!audience)
+      throw new ServiceUnavailableException(
+        'Google sign-in is not configured.',
+      );
+
+    let payload: TokenPayload | undefined;
+    try {
+      payload = await this.decodeGoogleToken(credential, audience);
+    } catch {
+      throw new UnauthorizedException('Google sign-in failed');
+    }
+    if (!payload?.email || !payload.email_verified)
+      throw new UnauthorizedException('Google sign-in failed');
+    return payload;
+  }
+
+  private async decodeGoogleToken(credential: string, audience: string) {
+    const ticket = await new OAuth2Client(audience).verifyIdToken({
+      idToken: credential,
+      audience,
+    });
+    return ticket.getPayload();
+  }
+
+  private async createGoogleStudent(email: string, profile: TokenPayload) {
+    // Random password: this account signs in with Google, or sets a real
+    // password through forgot-password.
+    const password = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
+    const student = new this.studentModel({
+      email,
+      password,
+      firstName: profile.given_name || profile.name || 'Student',
+      lastName: profile.family_name || '-',
+      studentId: await this.studentsService.generateStudentId(),
+      application: {},
+    });
+
+    try {
+      await student.save();
+    } catch (err: any) {
+      // Two sign-ins at once: the other one created the account
+      if (err?.code === 11000) {
+        const existing = await this.studentModel.findOne({ email });
+        if (existing) return existing;
+      }
+      throw err;
+    }
+    await this.studentsService.calculateProfileCompletion(
+      student._id.toString(),
+    );
+
+    this.emailService
+      .sendTemplateEmail(
+        'registration_confirmation',
+        { email, name: `${student.firstName} ${student.lastName}` },
+        {
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email,
+          studentId: student.studentId,
+        },
+      )
+      .catch(() => {});
+    return student;
   }
 
   async changePassword(

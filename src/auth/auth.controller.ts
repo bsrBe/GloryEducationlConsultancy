@@ -10,6 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterStudentDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google.dto';
 import { ChangePasswordDto, RequestPasswordResetDto, ResetPasswordDto } from './dto/password.dto';
 
 @Controller('auth')
@@ -19,6 +20,11 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterStudentDto) {
     return this.authService.registerStudent(dto);
+  }
+
+  @Post('google')
+  googleLogin(@Body() dto: GoogleLoginDto) {
+    return this.authService.googleLogin(dto);
   }
 
   @Post('login')

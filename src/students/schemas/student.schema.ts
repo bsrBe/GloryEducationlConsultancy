@@ -236,7 +236,8 @@ export class Student {
   @Prop({ required: true, trim: true })
   lastName: string;
 
-  @Prop({ required: true })
+  // Optional: Google sign-up doesn't provide one. The application form asks for it.
+  @Prop()
   phone: string;
 
   @Prop()
