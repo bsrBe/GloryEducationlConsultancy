@@ -22,8 +22,25 @@ export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           <li>Complete your detailed Admissions Profile</li>
           <li>Upload your academic documents (combined PDF)</li>
         </ol>
+        ${data.verifyUrl ? `<p><strong>Please confirm your email address:</strong></p>
+        <p><a href="${data.verifyUrl}" style="background-color: #002b5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Confirm my email</a></p>
+        <p>This link works for 48 hours.</p>` : ''}
         <p>Your Student ID is your permanent reference number. Please keep it safe.</p>
         <p>If you have any questions, please don't hesitate to contact us.</p>
+        <p>Best regards,<br>Veridan Education</p>
+      </div>
+    `,
+  },
+
+  email_verification: {
+    subject: 'Confirm your email - Veridan Education',
+    html: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #002b5f;">Confirm your email</h2>
+        <p>Dear ${data.firstName},</p>
+        <p>Please confirm this email address for your Veridan Education account.</p>
+        <p><a href="${data.verifyUrl}" style="background-color: #002b5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Confirm my email</a></p>
+        <p>This link works for 48 hours. If you did not ask for this, you can ignore this email.</p>
         <p>Best regards,<br>Veridan Education</p>
       </div>
     `,

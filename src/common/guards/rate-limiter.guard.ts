@@ -24,9 +24,10 @@ const CREDENTIALS_PER_ACCOUNT = 10;
 const CREDENTIAL_PATHS = [
   '/api/auth/login',
   '/api/auth/forgot-password',
+  '/api/auth/verify-email',
   '/api/auth/reset-password',
 ];
-const SIGN_UP_PATH = '/api/auth/register';
+const SIGN_UP_PATHS = ['/api/auth/register', '/api/auth/google'];
 
 @Injectable()
 export class RateLimiterGuard implements CanActivate {
@@ -44,7 +45,7 @@ export class RateLimiterGuard implements CanActivate {
 
     this.count(`all:${ip}`, GENERAL_PER_IP, now, res);
 
-    if (req.method === 'POST' && req.path === SIGN_UP_PATH) {
+    if (req.method === 'POST' && SIGN_UP_PATHS.includes(req.path)) {
       this.count(`signup:${ip}`, SIGN_UP_PER_IP, now, res);
     }
 

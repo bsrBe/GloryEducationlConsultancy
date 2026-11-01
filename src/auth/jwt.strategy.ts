@@ -26,12 +26,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     email: string;
     role: string;
     type: string;
+    iat?: number;
   }) {
     if (payload.type === 'student') {
       const student = await this.studentModel
         .findById(payload.sub)
-        .select('-password');
-      if (!student) throw new UnauthorizedException();
+        .select('-password +sessionsValidAfter');
+      if (!student || student.isActive === false)
+        throw new UnauthorizedException();
+      if (
+        student.sessionsValidAfter &&
+        (payload.iat ?? 0) * 1000 < student.sessionsValidAfter.getTime()
+      )
+        throw new UnauthorizedException();
       return { ...student.toObject(), role: 'student', type: 'student' };
     }
 
