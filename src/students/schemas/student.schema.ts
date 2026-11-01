@@ -335,10 +335,11 @@ export class Student {
   @Prop()
   influencerSource: string;
 
-  @Prop()
+  // Hidden from every query unless explicitly selected
+  @Prop({ select: false })
   passwordResetToken: string;
 
-  @Prop()
+  @Prop({ select: false })
   passwordResetExpires: Date;
 
   @Prop({ default: true })

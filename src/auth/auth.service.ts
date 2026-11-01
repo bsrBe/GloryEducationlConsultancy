@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'crypto';
 import { User, UserRole } from '../users/schemas/user.schema';
 import { Student } from '../students/schemas/student.schema';
 import { RegisterStudentDto } from './dto/register.dto';
@@ -209,9 +210,9 @@ export class AuthService {
   async requestPasswordReset(email: string) {
     const normalizedEmail = email.toLowerCase();
     
-    // Generate reset token
-    const resetToken = Math.random().toString(36).substring(2, 15) + 
-                      Math.random().toString(36).substring(2, 15);
+    // Only a hash is stored, so a leaked database can't be used to reset passwords
+    const resetToken = randomBytes(32).toString('hex');
+    const hashedToken = this.hashToken(resetToken);
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     // Try to find user first
@@ -234,12 +235,12 @@ export class AuthService {
     // Update reset token
     if (isStudent) {
       await this.studentModel.findByIdAndUpdate(user._id, {
-        passwordResetToken: resetToken,
+        passwordResetToken: hashedToken,
         passwordResetExpires: resetExpires,
       });
     } else {
       await this.userModel.findByIdAndUpdate(user._id, {
-        passwordResetToken: resetToken,
+        passwordResetToken: hashedToken,
         passwordResetExpires: resetExpires,
       });
     }
@@ -274,9 +275,11 @@ export class AuthService {
       throw new BadRequestException('Token and new password are required');
     }
 
+    const hashedToken = this.hashToken(token);
+
     // Try to find user with valid reset token
     let user = await this.userModel.findOne({
-      passwordResetToken: token,
+      passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: new Date() },
     });
     
@@ -285,7 +288,7 @@ export class AuthService {
     if (!user) {
       // Try students
       user = await this.studentModel.findOne({
-        passwordResetToken: token,
+        passwordResetToken: hashedToken,
         passwordResetExpires: { $gt: new Date() },
       });
       isStudent = true;
@@ -302,14 +305,12 @@ export class AuthService {
     if (isStudent) {
       await this.studentModel.findByIdAndUpdate(user._id, {
         password: hashedPassword,
-        passwordResetToken: undefined,
-        passwordResetExpires: undefined,
+        $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
       });
     } else {
       await this.userModel.findByIdAndUpdate(user._id, {
         password: hashedPassword,
-        passwordResetToken: undefined,
-        passwordResetExpires: undefined,
+        $unset: { passwordResetToken: 1, passwordResetExpires: 1 },
       });
     }
 
@@ -332,6 +333,10 @@ export class AuthService {
       });
 
     return { message: 'Password reset successful' };
+  }
+
+  private hashToken(token: string) {
+    return createHash('sha256').update(token).digest('hex');
   }
 
   private generateToken(payload: {

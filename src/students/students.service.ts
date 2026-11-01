@@ -106,7 +106,10 @@ export class StudentsService {
   }
 
   async calculateProfileCompletion(id: string) {
-    const student = await this.studentModel.findById(id).lean();
+    const student = await this.studentModel
+      .findById(id)
+      .select('-password')
+      .lean();
     if (!student) throw new NotFoundException('Student not found');
 
     const requiredFields = [
