@@ -30,10 +30,11 @@ export class User extends Document {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop()
+  // Hidden from every query unless explicitly selected
+  @Prop({ select: false })
   passwordResetToken: string;
 
-  @Prop()
+  @Prop({ select: false })
   passwordResetExpires: Date;
 }
 
