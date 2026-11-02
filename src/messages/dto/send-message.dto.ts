@@ -1,22 +1,31 @@
-import { IsString, IsEnum, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsMongoId,
+  IsNotEmpty,
+  MaxLength,
+} from 'class-validator';
 
 export class SendMessageDto {
-  @IsString()
-  recipientId: string;
+  // Staff only: the student to message. Students always write to the team.
+  @IsOptional()
+  @IsMongoId()
+  recipientId?: string;
 
+  @IsOptional()
   @IsEnum(['User', 'Student'])
-  recipientModel: string;
-
-  @IsString()
-  subject: string;
+  recipientModel?: string;
 
   @IsOptional()
   @IsString()
-  body?: string;
+  @MaxLength(200)
+  subject?: string;
 
-  @IsOptional()
   @IsString()
-  content?: string;
+  @IsNotEmpty()
+  @MaxLength(5000)
+  body: string;
 
   @IsOptional()
   @IsEnum(['template', 'manual'])
