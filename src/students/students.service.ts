@@ -29,6 +29,8 @@ import { PaymentVerificationService } from './payment-verification.service';
 // Sensitive fields that university representatives don't need.
 const PERSONAL_DETAIL_FIELDS = '-dateOfBirth -gender';
 
+const MAX_ACTIVE_DOCUMENTS = 2;
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -368,6 +370,24 @@ export class StudentsService {
     };
   }
 
+  private ensureDocumentSlotAvailable(student: StudentDoc) {
+    // Documents flagged by staff don't count, so the student can replace them
+    const activeDocuments = student.documents.filter(
+      (doc) => doc.reviewStatus !== 'Needs Replacement',
+    );
+    if (activeDocuments.length >= MAX_ACTIVE_DOCUMENTS) {
+      throw new BadRequestException(
+        `You can upload up to ${MAX_ACTIVE_DOCUMENTS} documents. You have reached this limit.`,
+      );
+    }
+  }
+
+  async assertCanAddDocument(studentId: string) {
+    const student = await this.studentModel.findById(studentId);
+    if (!student) throw new NotFoundException('Student not found');
+    this.ensureDocumentSlotAvailable(student);
+  }
+
   async addDocument(
     studentId: string,
     file: Express.Multer.File,
@@ -375,6 +395,7 @@ export class StudentsService {
   ) {
     const student = await this.studentModel.findById(studentId);
     if (!student) throw new NotFoundException('Student not found');
+    this.ensureDocumentSlotAvailable(student);
     const doc = {
       fileName: file.originalname,
       cloudinaryUrl,

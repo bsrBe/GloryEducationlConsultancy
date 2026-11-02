@@ -122,13 +122,17 @@ export class StudentsController {
 
   // --- Upload document ---
   @Post(':id/documents')
-  @UseInterceptors(FileInterceptor('file'))
+  // Multer rejects a file on reaching the limit, so +1 keeps exactly 10 MB valid
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 + 1 } }),
+  )
   async uploadDocument(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
     await this.assertAccess(req, id, { repAllowed: false });
+    await this.studentsService.assertCanAddDocument(id);
     const result = await this.cloudinaryService.uploadFile(file);
     return this.studentsService.addDocument(id, file, result.url);
   }
